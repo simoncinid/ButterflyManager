@@ -1,4 +1,4 @@
-import { Project, TimeEntry, Payment, BillingMode } from '@prisma/client';
+import { Project, BillingMode } from '../types/prisma';
 import { prisma } from '../index';
 
 interface ProjectWithEntries extends Project {

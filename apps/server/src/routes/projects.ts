@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../index';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
-import { ProjectStatus, BillingMode, RecurringPeriodType } from '@prisma/client';
+import { ProjectStatus, BillingMode, RecurringPeriodType } from '../types/prisma';
 import { calculateProjectStats } from '../utils/billing';
 
 export const projectRouter = Router();

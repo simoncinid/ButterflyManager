@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../index';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
-import { TodoPriority } from '@prisma/client';
+import { TodoPriority } from '../types/prisma';
 
 export const todoRouter = Router();
 

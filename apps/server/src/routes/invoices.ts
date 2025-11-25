@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../index';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
-import { InvoiceStatus } from '@prisma/client';
+import { InvoiceStatus } from '../types/prisma';
 
 export const invoiceRouter = Router();
 
