@@ -8,16 +8,16 @@ import { InvoiceStatus } from '../types/prisma';
 export const invoiceRouter = Router();
 
 const createInvoiceSchema = z.object({
-  projectId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional().nullable(),
   issueDate: z.string(),
-  dueDate: z.string().optional(),
-  amount: z.number().positive(),
+  dueDate: z.string().optional().nullable(),
+  amount: z.coerce.number().positive(),
   currency: z.string().default('EUR'),
   status: z.nativeEnum(InvoiceStatus).optional().default(InvoiceStatus.DRAFT),
-  externalNumber: z.string().optional(),
-  notes: z.string().optional(),
-  periodStart: z.string().optional(),
-  periodEnd: z.string().optional(),
+  externalNumber: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  periodStart: z.string().optional().nullable(),
+  periodEnd: z.string().optional().nullable(),
 });
 
 const updateInvoiceSchema = createInvoiceSchema.partial();
@@ -101,7 +101,9 @@ invoiceRouter.get('/:invoiceId', async (req: AuthRequest, res: Response) => {
 // Create invoice
 invoiceRouter.post('/', async (req: AuthRequest, res: Response) => {
   try {
+    console.log('Create invoice request:', { body: req.body });
     const data = createInvoiceSchema.parse(req.body);
+    console.log('Parsed invoice data:', data);
 
     // Verify project ownership if projectId is provided
     if (data.projectId) {
@@ -131,14 +133,19 @@ invoiceRouter.post('/', async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json({ success: true, data: invoice });
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
+      console.error('Invoice validation error:', error.errors);
       return res.status(400).json({ success: false, error: error.errors });
     }
     if (error instanceof AppError) {
       return res.status(error.statusCode).json({ success: false, error: error.message });
     }
-    console.error('Create invoice error:', error);
+    console.error('Create invoice error:', {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+    });
     res.status(500).json({ success: false, error: 'Failed to create invoice' });
   }
 });

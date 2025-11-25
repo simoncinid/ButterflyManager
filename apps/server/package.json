@@ -6,6 +6,9 @@
     "dev": "tsx watch src/index.ts",
     "build": "yarn prisma generate && tsc",
     "start": "node dist/index.js",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "deploy": "yarn prisma generate && yarn prisma migrate deploy && yarn build",
     "lint": "eslint src --ext .ts",
     "test": "vitest",
     "prisma": "prisma"

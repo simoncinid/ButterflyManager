@@ -8,12 +8,12 @@ export const paymentRouter = Router();
 
 const createPaymentSchema = z.object({
   invoiceId: z.string().uuid(),
-  projectId: z.string().uuid().optional(),
+  projectId: z.string().uuid().optional().nullable(),
   paymentDate: z.string(),
-  amount: z.number().positive(),
+  amount: z.coerce.number().positive(),
   currency: z.string().default('EUR'),
-  method: z.string().optional(),
-  notes: z.string().optional(),
+  method: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
 });
 
 const updatePaymentSchema = createPaymentSchema.partial();
@@ -79,7 +79,9 @@ paymentRouter.get('/:paymentId', async (req: AuthRequest, res: Response) => {
 // Create payment
 paymentRouter.post('/', async (req: AuthRequest, res: Response) => {
   try {
+    console.log('Create payment request:', { body: req.body });
     const data = createPaymentSchema.parse(req.body);
+    console.log('Parsed payment data:', data);
 
     // Verify invoice ownership
     const invoice = await prisma.invoice.findFirst({
@@ -131,14 +133,19 @@ paymentRouter.post('/', async (req: AuthRequest, res: Response) => {
     }
 
     res.status(201).json({ success: true, data: payment });
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
+      console.error('Payment validation error:', error.errors);
       return res.status(400).json({ success: false, error: error.errors });
     }
     if (error instanceof AppError) {
       return res.status(error.statusCode).json({ success: false, error: error.message });
     }
-    console.error('Create payment error:', error);
+    console.error('Create payment error:', {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+    });
     res.status(500).json({ success: false, error: 'Failed to create payment' });
   }
 });

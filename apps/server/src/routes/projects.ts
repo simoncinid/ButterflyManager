@@ -10,17 +10,17 @@ export const projectRouter = Router();
 
 const createProjectSchema = z.object({
   name: z.string().min(1, 'Name is required'),
-  clientName: z.string().optional(),
-  description: z.string().optional(),
+  clientName: z.string().optional().nullable(),
+  description: z.string().optional().nullable(),
   status: z.nativeEnum(ProjectStatus).optional().default(ProjectStatus.ACTIVE),
   billingMode: z.nativeEnum(BillingMode),
-  fixedTotalAmount: z.number().positive().optional(),
-  recurringAmount: z.number().positive().optional(),
-  recurringPeriodType: z.nativeEnum(RecurringPeriodType).optional(),
-  hourlyRate: z.number().positive().optional(),
+  fixedTotalAmount: z.coerce.number().positive().optional().nullable(),
+  recurringAmount: z.coerce.number().positive().optional().nullable(),
+  recurringPeriodType: z.nativeEnum(RecurringPeriodType).optional().nullable(),
+  hourlyRate: z.coerce.number().positive().optional().nullable(),
   currency: z.string().default('EUR'),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
+  startDate: z.string().optional().nullable(),
+  endDate: z.string().optional().nullable(),
 });
 
 const updateProjectSchema = createProjectSchema.partial();
@@ -121,7 +121,9 @@ projectRouter.get('/:projectId', async (req: AuthRequest, res: Response) => {
 // Create project
 projectRouter.post('/', async (req: AuthRequest, res: Response) => {
   try {
+    console.log('Create project request:', { body: req.body });
     const data = createProjectSchema.parse(req.body);
+    console.log('Parsed data:', data);
 
     const project = await prisma.project.create({
       data: {
@@ -142,11 +144,16 @@ projectRouter.post('/', async (req: AuthRequest, res: Response) => {
     });
 
     res.status(201).json({ success: true, data: project });
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       return res.status(400).json({ success: false, error: error.errors });
     }
-    console.error('Create project error:', error);
+    console.error('Create project error:', {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+    });
     res.status(500).json({ success: false, error: 'Failed to create project' });
   }
 });
