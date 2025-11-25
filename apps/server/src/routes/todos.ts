@@ -30,10 +30,14 @@ todoRouter.put('/:todoId', async (req: AuthRequest, res: Response) => {
       throw new AppError('Todo not found', 404);
     }
 
-    const updateData: any = { ...data };
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title as string;
+    if (data.description !== undefined) updateData.description = (data.description as string) || null;
+    if (data.priority !== undefined) updateData.priority = data.priority as any;
+    if (data.completed !== undefined) updateData.completed = data.completed as boolean;
 
     if (data.dueDate !== undefined) {
-      updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
+      updateData.dueDate = data.dueDate ? new Date(data.dueDate as string) : null;
     }
 
     if (data.completed !== undefined) {

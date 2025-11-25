@@ -125,10 +125,19 @@ projectRouter.post('/', async (req: AuthRequest, res: Response) => {
 
     const project = await prisma.project.create({
       data: {
-        ...data,
+        name: data.name as string,
+        clientName: (data.clientName as string) || null,
+        description: (data.description as string) || null,
+        status: (data.status as any) || 'ACTIVE',
+        billingMode: data.billingMode as any,
+        fixedTotalAmount: data.fixedTotalAmount ? (data.fixedTotalAmount as number) : null,
+        recurringAmount: data.recurringAmount ? (data.recurringAmount as number) : null,
+        recurringPeriodType: (data.recurringPeriodType as any) || null,
+        hourlyRate: data.hourlyRate ? (data.hourlyRate as number) : null,
+        currency: (data.currency as string) || 'EUR',
         userId: req.userId!,
-        startDate: data.startDate ? new Date(data.startDate) : null,
-        endDate: data.endDate ? new Date(data.endDate) : null,
+        startDate: data.startDate ? new Date(data.startDate as string) : null,
+        endDate: data.endDate ? new Date(data.endDate as string) : null,
       },
     });
 
@@ -155,13 +164,23 @@ projectRouter.put('/:projectId', async (req: AuthRequest, res: Response) => {
       throw new AppError('Project not found', 404);
     }
 
+    const updateData: any = {};
+    if (data.name !== undefined) updateData.name = data.name as string;
+    if (data.clientName !== undefined) updateData.clientName = (data.clientName as string) || null;
+    if (data.description !== undefined) updateData.description = (data.description as string) || null;
+    if (data.status !== undefined) updateData.status = data.status as any;
+    if (data.billingMode !== undefined) updateData.billingMode = data.billingMode as any;
+    if (data.fixedTotalAmount !== undefined) updateData.fixedTotalAmount = data.fixedTotalAmount ? (data.fixedTotalAmount as number) : null;
+    if (data.recurringAmount !== undefined) updateData.recurringAmount = data.recurringAmount ? (data.recurringAmount as number) : null;
+    if (data.recurringPeriodType !== undefined) updateData.recurringPeriodType = (data.recurringPeriodType as any) || null;
+    if (data.hourlyRate !== undefined) updateData.hourlyRate = data.hourlyRate ? (data.hourlyRate as number) : null;
+    if (data.currency !== undefined) updateData.currency = data.currency as string;
+    if (data.startDate !== undefined) updateData.startDate = data.startDate ? new Date(data.startDate as string) : null;
+    if (data.endDate !== undefined) updateData.endDate = data.endDate ? new Date(data.endDate as string) : null;
+
     const project = await prisma.project.update({
       where: { id: req.params.projectId },
-      data: {
-        ...data,
-        startDate: data.startDate ? new Date(data.startDate) : undefined,
-        endDate: data.endDate ? new Date(data.endDate) : undefined,
-      },
+      data: updateData,
     });
 
     res.json({ success: true, data: project });

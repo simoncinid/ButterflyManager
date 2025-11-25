@@ -116,16 +116,16 @@ invoiceRouter.post('/', async (req: AuthRequest, res: Response) => {
     const invoice = await prisma.invoice.create({
       data: {
         userId: req.userId!,
-        projectId: data.projectId || null,
-        issueDate: new Date(data.issueDate),
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        amount: data.amount,
-        currency: data.currency,
-        status: data.status,
-        externalNumber: data.externalNumber,
-        notes: data.notes,
-        periodStart: data.periodStart ? new Date(data.periodStart) : null,
-        periodEnd: data.periodEnd ? new Date(data.periodEnd) : null,
+        projectId: (data.projectId as string) || null,
+        issueDate: new Date(data.issueDate as string),
+        dueDate: data.dueDate ? new Date(data.dueDate as string) : null,
+        amount: data.amount as number,
+        currency: (data.currency as string) || 'EUR',
+        status: (data.status as any) || 'DRAFT',
+        externalNumber: (data.externalNumber as string) || null,
+        notes: (data.notes as string) || null,
+        periodStart: data.periodStart ? new Date(data.periodStart as string) : null,
+        periodEnd: data.periodEnd ? new Date(data.periodEnd as string) : null,
       },
       include: { project: true },
     });
@@ -166,15 +166,21 @@ invoiceRouter.put('/:invoiceId', async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const updateData: any = {};
+    if (data.projectId !== undefined) updateData.projectId = (data.projectId as string) || null;
+    if (data.issueDate !== undefined) updateData.issueDate = new Date(data.issueDate as string);
+    if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate as string) : null;
+    if (data.amount !== undefined) updateData.amount = data.amount as number;
+    if (data.currency !== undefined) updateData.currency = data.currency as string;
+    if (data.status !== undefined) updateData.status = data.status as any;
+    if (data.externalNumber !== undefined) updateData.externalNumber = (data.externalNumber as string) || null;
+    if (data.notes !== undefined) updateData.notes = (data.notes as string) || null;
+    if (data.periodStart !== undefined) updateData.periodStart = data.periodStart ? new Date(data.periodStart as string) : null;
+    if (data.periodEnd !== undefined) updateData.periodEnd = data.periodEnd ? new Date(data.periodEnd as string) : null;
+
     const invoice = await prisma.invoice.update({
       where: { id: req.params.invoiceId },
-      data: {
-        ...data,
-        issueDate: data.issueDate ? new Date(data.issueDate) : undefined,
-        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
-        periodStart: data.periodStart ? new Date(data.periodStart) : undefined,
-        periodEnd: data.periodEnd ? new Date(data.periodEnd) : undefined,
-      },
+      data: updateData,
       include: { project: true },
     });
 
