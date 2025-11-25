@@ -1,5 +1,7 @@
 import dotenv from 'dotenv';
-dotenv.config();
+// Load .env file only if it exists (for local development)
+// On Render, environment variables are set directly
+dotenv.config({ path: '.env' });
 
 import express from 'express';
 import cors from 'cors';
@@ -53,6 +55,13 @@ app.use(errorHandler);
 // Start server
 const startServer = async () => {
   try {
+    // Check if DATABASE_URL is set
+    if (!process.env.DATABASE_URL) {
+      console.error('❌ DATABASE_URL environment variable is not set!');
+      console.error('Please set DATABASE_URL in your Render environment variables.');
+      process.exit(1);
+    }
+
     await prisma.$connect();
     console.log('✅ Connected to database');
 
