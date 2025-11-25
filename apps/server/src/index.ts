@@ -3,6 +3,20 @@ import dotenv from 'dotenv';
 // On Render, environment variables are set directly
 dotenv.config({ path: '.env' });
 
+// Validate DATABASE_URL before importing Prisma
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error('❌ DATABASE_URL environment variable is not set!');
+  console.error('Please set DATABASE_URL in your Render environment variables.');
+  process.exit(1);
+}
+
+if (!DATABASE_URL.startsWith('postgresql://') && !DATABASE_URL.startsWith('postgres://')) {
+  console.error('❌ DATABASE_URL must start with postgresql:// or postgres://');
+  console.error('Current value:', DATABASE_URL ? `${DATABASE_URL.substring(0, 20)}...` : 'undefined');
+  process.exit(1);
+}
+
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
@@ -55,13 +69,6 @@ app.use(errorHandler);
 // Start server
 const startServer = async () => {
   try {
-    // Check if DATABASE_URL is set
-    if (!process.env.DATABASE_URL) {
-      console.error('❌ DATABASE_URL environment variable is not set!');
-      console.error('Please set DATABASE_URL in your Render environment variables.');
-      process.exit(1);
-    }
-
     await prisma.$connect();
     console.log('✅ Connected to database');
 
