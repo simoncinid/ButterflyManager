@@ -359,7 +359,7 @@ projectRouter.post('/:projectId/time-entries/start', async (req: AuthRequest, re
   }
 });
 
-// Resume time tracking from a specific time entry
+// Resume time tracking - reopen an existing time entry
 projectRouter.post(
   '/:projectId/time-entries/:timeEntryId/resume',
   async (req: AuthRequest, res: Response) => {
@@ -385,8 +385,8 @@ projectRouter.post(
         );
       }
 
-      // Find the specific time entry to resume from
-      const sourceEntry = await prisma.timeEntry.findFirst({
+      // Find the specific time entry to resume
+      const existingEntry = await prisma.timeEntry.findFirst({
         where: {
           id: req.params.timeEntryId,
           projectId: req.params.projectId,
@@ -395,21 +395,23 @@ projectRouter.post(
         },
       });
 
-      if (!sourceEntry) {
+      if (!existingEntry) {
         throw new AppError('Time entry not found or still running', 404);
       }
 
-      // Create a new time entry with the same note as the source entry
-      const timeEntry = await prisma.timeEntry.create({
+      // Reopen the existing time entry by clearing endedAt
+      // Keep the existing durationMinutes, it will be recalculated when stopped again
+      const resumedEntry = await prisma.timeEntry.update({
+        where: { id: req.params.timeEntryId },
         data: {
-          projectId: req.params.projectId,
-          userId: req.userId!,
-          startedAt: new Date(),
-          note: sourceEntry.note,
+          endedAt: null,
+          // Store the previous duration so we can add to it when stopped
+          // We'll use a trick: set startedAt to now minus the previous duration
+          startedAt: new Date(Date.now() - (existingEntry.durationMinutes || 0) * 60 * 1000),
         },
       });
 
-      res.status(201).json({ success: true, data: timeEntry });
+      res.json({ success: true, data: resumedEntry });
     } catch (error) {
       if (error instanceof AppError) {
         return res.status(error.statusCode).json({ success: false, error: error.message });

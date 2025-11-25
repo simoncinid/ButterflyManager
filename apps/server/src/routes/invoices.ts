@@ -115,6 +115,8 @@ invoiceRouter.post('/', async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const invoiceStatus = (data.status as string) || 'DRAFT';
+    
     const invoice = await prisma.invoice.create({
       data: {
         userId: req.userId!,
@@ -123,7 +125,7 @@ invoiceRouter.post('/', async (req: AuthRequest, res: Response) => {
         dueDate: data.dueDate ? new Date(data.dueDate as string) : null,
         amount: data.amount as number,
         currency: (data.currency as string) || 'EUR',
-        status: (data.status as any) || 'DRAFT',
+        status: invoiceStatus as any,
         externalNumber: (data.externalNumber as string) || null,
         notes: (data.notes as string) || null,
         periodStart: data.periodStart ? new Date(data.periodStart as string) : null,
@@ -132,7 +134,30 @@ invoiceRouter.post('/', async (req: AuthRequest, res: Response) => {
       include: { project: true },
     });
 
-    res.status(201).json({ success: true, data: invoice });
+    // If created with status PAID, create automatic payment
+    if (invoiceStatus === 'PAID' && Number(data.amount) > 0) {
+      console.log('Creating auto-payment for new PAID invoice:', invoice.id);
+      await prisma.payment.create({
+        data: {
+          userId: req.userId!,
+          invoiceId: invoice.id,
+          projectId: invoice.projectId,
+          paymentDate: new Date(),
+          amount: data.amount as number,
+          currency: (data.currency as string) || 'EUR',
+          method: 'Automatic',
+          notes: 'Auto-created when invoice created as paid',
+        },
+      });
+    }
+
+    // Refetch with payments
+    const invoiceWithPayments = await prisma.invoice.findFirst({
+      where: { id: invoice.id },
+      include: { project: true, payments: true },
+    });
+
+    res.status(201).json({ success: true, data: invoiceWithPayments });
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       console.error('Invoice validation error:', error.errors);
@@ -186,12 +211,16 @@ invoiceRouter.put('/:invoiceId', async (req: AuthRequest, res: Response) => {
     if (data.periodEnd !== undefined) updateData.periodEnd = data.periodEnd ? new Date(data.periodEnd as string) : null;
 
     // Check if status is being changed to PAID
-    const isStatusChangingToPaid = data.status === 'PAID' && existing.status !== 'PAID';
+    const newStatus = data.status as string;
+    const oldStatus = existing.status as string;
+    const isStatusChangingToPaid = newStatus === 'PAID' && oldStatus !== 'PAID';
     console.log('Invoice update:', {
       invoiceId: req.params.invoiceId,
-      oldStatus: existing.status,
-      newStatus: data.status,
+      oldStatus,
+      newStatus,
       isStatusChangingToPaid,
+      dataStatus: data.status,
+      existingStatus: existing.status,
     });
 
     const invoice = await prisma.invoice.update({
