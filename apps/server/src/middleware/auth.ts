@@ -8,6 +8,7 @@ export interface AuthRequest extends Request {
   params: any;
   query: any;
   cookies: any;
+  headers: any;
 }
 
 export const authMiddleware = async (

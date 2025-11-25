@@ -5,6 +5,9 @@ export {
   RecurringPeriodType,
   TodoPriority,
   InvoiceStatus,
+};
+
+export type {
   Project,
   TimeEntry,
   Payment,

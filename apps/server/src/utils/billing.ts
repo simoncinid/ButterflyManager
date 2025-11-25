@@ -1,13 +1,5 @@
-import { Project, BillingMode } from '../types/prisma';
+import { Project } from '../types/prisma';
 import { prisma } from '../index';
-
-interface ProjectWithEntries extends Project {
-  timeEntries?: Array<{
-    durationMinutes: number | null;
-    endedAt: Date | null;
-    startedAt: Date;
-  }>;
-}
 
 interface ProjectStats {
   totalHours: number;
@@ -18,7 +10,7 @@ interface ProjectStats {
 /**
  * Calculate project statistics based on billing mode
  */
-export async function calculateProjectStats(project: ProjectWithEntries): Promise<ProjectStats> {
+export async function calculateProjectStats(project: Project): Promise<ProjectStats> {
   // Get all completed time entries for the project
   const timeEntries = await prisma.timeEntry.findMany({
     where: {
