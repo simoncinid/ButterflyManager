@@ -10,7 +10,7 @@ const createPaymentSchema = z.object({
   invoiceId: z.string().uuid(),
   projectId: z.string().uuid().optional().nullable(),
   paymentDate: z.string(),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().min(0),
   currency: z.string().default('EUR'),
   method: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),

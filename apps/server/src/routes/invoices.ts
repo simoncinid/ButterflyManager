@@ -11,7 +11,7 @@ const createInvoiceSchema = z.object({
   projectId: z.string().uuid().optional().nullable(),
   issueDate: z.string(),
   dueDate: z.string().optional().nullable(),
-  amount: z.coerce.number().positive(),
+  amount: z.coerce.number().min(0),
   currency: z.string().default('EUR'),
   status: z.nativeEnum(InvoiceStatus).optional().default(InvoiceStatus.DRAFT),
   externalNumber: z.string().optional().nullable(),
