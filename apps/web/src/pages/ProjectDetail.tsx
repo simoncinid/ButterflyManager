@@ -25,7 +25,7 @@ export default function ProjectDetail() {
   const [showStopModal, setShowStopModal] = useState(false);
 
   // Fetch project data
-  const { data: project, isLoading } = useQuery({
+  const { data: project, isLoading, refetch: refetchProject } = useQuery({
     queryKey: ['project', projectId],
     queryFn: async () => {
       const res = await projectsApi.getOne(projectId!);
@@ -68,11 +68,15 @@ export default function ProjectDetail() {
   const stopTimerMutation = useMutation({
     mutationFn: ({ timeEntryId, note }: { timeEntryId: string; note?: string }) =>
       projectsApi.stopTimer(projectId!, timeEntryId, note),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
-      queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
+    onSuccess: async () => {
+      setTimerElapsed(0);
       setStopNote('');
       setShowStopModal(false);
+      // Immediately refetch to get updated data
+      await refetchProject();
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Timer stopped!');
     },
     onError: () => {
@@ -290,7 +294,9 @@ export default function ProjectDetail() {
                     </p>
                   </div>
                   <p className="text-sm font-medium text-slate-900 dark:text-white">
-                    {entry.durationMinutes ? formatMinutesToHours(entry.durationMinutes) : 'Running...'}
+                    {entry.endedAt 
+                      ? (entry.durationMinutes ? formatMinutesToHours(entry.durationMinutes) : '< 1m')
+                      : 'Running...'}
                   </p>
                 </div>
               ))}
@@ -327,7 +333,9 @@ export default function ProjectDetail() {
                 </div>
                 <div className="text-right">
                   <p className="font-semibold text-slate-900 dark:text-white">
-                    {entry.durationMinutes ? formatMinutesToHours(entry.durationMinutes) : 'Running...'}
+                    {entry.endedAt 
+                      ? (entry.durationMinutes ? formatMinutesToHours(entry.durationMinutes) : '< 1m')
+                      : 'Running...'}
                   </p>
                   {project.billingMode === 'HOURLY' && entry.durationMinutes && (
                     <p className="text-sm text-amber-500">
