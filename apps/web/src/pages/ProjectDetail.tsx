@@ -66,6 +66,19 @@ export default function ProjectDetail() {
     },
   });
 
+  // Resume timer mutation
+  const resumeTimerMutation = useMutation({
+    mutationFn: () => projectsApi.resumeTimer(projectId!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
+      toast.success('Timer resumed!');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.error || 'Failed to resume timer');
+    },
+  });
+
   // Stop timer mutation
   const stopTimerMutation = useMutation({
     mutationFn: ({ timeEntryId, note }: { timeEntryId: string; note?: string }) =>
@@ -254,16 +267,31 @@ export default function ProjectDetail() {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => startTimerMutation.mutate()}
-                disabled={startTimerMutation.isPending}
-                className="px-6 py-3 bg-emerald-500 text-white font-medium rounded-xl hover:bg-emerald-600 transition-colors flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-                Start Timer
-              </button>
+              <div className="flex items-center gap-3">
+                {project.timeEntries && project.timeEntries.length > 0 && project.timeEntries.some((e: any) => e.endedAt) && (
+                  <button
+                    onClick={() => resumeTimerMutation.mutate()}
+                    disabled={resumeTimerMutation.isPending}
+                    className="px-6 py-3 bg-blue-500 text-white font-medium rounded-xl hover:bg-blue-600 transition-colors flex items-center gap-2"
+                    title="Resume last timer"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                    Resume
+                  </button>
+                )}
+                <button
+                  onClick={() => startTimerMutation.mutate()}
+                  disabled={startTimerMutation.isPending}
+                  className="px-6 py-3 bg-emerald-500 text-white font-medium rounded-xl hover:bg-emerald-600 transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  Start Timer
+                </button>
+              </div>
             )}
           </div>
         </div>

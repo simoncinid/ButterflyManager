@@ -130,6 +130,7 @@ export const projectsApi = {
   // Time entries
   getTimeEntries: (projectId: string) => api.get(`/projects/${projectId}/time-entries`),
   startTimer: (projectId: string) => api.post(`/projects/${projectId}/time-entries/start`),
+  resumeTimer: (projectId: string) => api.post(`/projects/${projectId}/time-entries/resume`),
   stopTimer: (projectId: string, timeEntryId: string, note?: string) =>
     api.post(`/projects/${projectId}/time-entries/${timeEntryId}/stop`, { note }),
   updateTimeEntry: (projectId: string, timeEntryId: string, data: any) =>

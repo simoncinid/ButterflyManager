@@ -185,13 +185,44 @@ invoiceRouter.put('/:invoiceId', async (req: AuthRequest, res: Response) => {
     if (data.periodStart !== undefined) updateData.periodStart = data.periodStart ? new Date(data.periodStart as string) : null;
     if (data.periodEnd !== undefined) updateData.periodEnd = data.periodEnd ? new Date(data.periodEnd as string) : null;
 
+    // Check if status is being changed to PAID
+    const isStatusChangingToPaid = data.status === 'PAID' && existing.status !== 'PAID';
+
     const invoice = await prisma.invoice.update({
       where: { id: req.params.invoiceId },
       data: updateData,
-      include: { project: true },
+      include: { project: true, payments: true },
     });
 
-    res.json({ success: true, data: invoice });
+    // If status changed to PAID, create automatic payment if no payments exist or if not fully paid
+    if (isStatusChangingToPaid) {
+      const totalPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const outstandingAmount = Number(invoice.amount) - totalPaid;
+
+      if (outstandingAmount > 0) {
+        // Create automatic payment for the outstanding amount
+        await prisma.payment.create({
+          data: {
+            userId: req.userId!,
+            invoiceId: invoice.id,
+            projectId: invoice.projectId,
+            paymentDate: new Date(),
+            amount: outstandingAmount,
+            currency: invoice.currency,
+            method: 'Automatic',
+            notes: 'Auto-created when invoice marked as paid',
+          },
+        });
+      }
+    }
+
+    // Refetch invoice with updated payments
+    const updatedInvoice = await prisma.invoice.findFirst({
+      where: { id: req.params.invoiceId },
+      include: { project: true, payments: true },
+    });
+
+    res.json({ success: true, data: updatedInvoice });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ success: false, error: error.errors });

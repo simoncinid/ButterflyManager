@@ -359,6 +359,67 @@ projectRouter.post('/:projectId/time-entries/start', async (req: AuthRequest, re
   }
 });
 
+// Resume time tracking (resume last time entry for this project)
+projectRouter.post(
+  '/:projectId/time-entries/resume',
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const project = await prisma.project.findFirst({
+        where: { id: req.params.projectId, userId: req.userId },
+      });
+
+      if (!project) {
+        throw new AppError('Project not found', 404);
+      }
+
+      // Check if user has an active session
+      const activeEntry = await prisma.timeEntry.findFirst({
+        where: { userId: req.userId, endedAt: null },
+        include: { project: { select: { name: true } } },
+      });
+
+      if (activeEntry) {
+        throw new AppError(
+          `You have an active session on project "${activeEntry.project.name}". Stop it first.`,
+          400
+        );
+      }
+
+      // Find the last time entry for this project
+      const lastEntry = await prisma.timeEntry.findFirst({
+        where: {
+          projectId: req.params.projectId,
+          userId: req.userId,
+          endedAt: { not: null },
+        },
+        orderBy: { endedAt: 'desc' },
+      });
+
+      if (!lastEntry) {
+        throw new AppError('No previous time entry found for this project', 404);
+      }
+
+      // Create a new time entry with the same note as the last one
+      const timeEntry = await prisma.timeEntry.create({
+        data: {
+          projectId: req.params.projectId,
+          userId: req.userId!,
+          startedAt: new Date(),
+          note: lastEntry.note,
+        },
+      });
+
+      res.status(201).json({ success: true, data: timeEntry });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ success: false, error: error.message });
+      }
+      console.error('Resume time entry error:', error);
+      res.status(500).json({ success: false, error: 'Failed to resume time entry' });
+    }
+  }
+);
+
 // Stop time tracking
 projectRouter.post(
   '/:projectId/time-entries/:timeEntryId/stop',
