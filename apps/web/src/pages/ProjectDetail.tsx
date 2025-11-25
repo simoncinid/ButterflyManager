@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { projectsApi, todosApi } from '../lib/api';
 import {
   formatCurrency,
-  formatNumber,
   formatDate,
   formatDateTime,
   formatMinutesToHours,

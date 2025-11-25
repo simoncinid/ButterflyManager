@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { projectsApi } from '../lib/api';
-import { formatCurrency, formatNumber, getBillingModeLabel, formatHoursMinutes } from '../lib/utils';
+import { formatCurrency, getBillingModeLabel, formatHoursMinutes } from '../lib/utils';
 import CreateProjectModal from '../components/CreateProjectModal';
 
 export default function Projects() {
