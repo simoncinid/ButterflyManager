@@ -187,6 +187,12 @@ invoiceRouter.put('/:invoiceId', async (req: AuthRequest, res: Response) => {
 
     // Check if status is being changed to PAID
     const isStatusChangingToPaid = data.status === 'PAID' && existing.status !== 'PAID';
+    console.log('Invoice update:', {
+      invoiceId: req.params.invoiceId,
+      oldStatus: existing.status,
+      newStatus: data.status,
+      isStatusChangingToPaid,
+    });
 
     const invoice = await prisma.invoice.update({
       where: { id: req.params.invoiceId },
@@ -198,10 +204,12 @@ invoiceRouter.put('/:invoiceId', async (req: AuthRequest, res: Response) => {
     if (isStatusChangingToPaid) {
       const totalPaid = invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0);
       const outstandingAmount = Number(invoice.amount) - totalPaid;
+      console.log('Auto-payment check:', { totalPaid, outstandingAmount, invoiceAmount: Number(invoice.amount) });
 
       if (outstandingAmount > 0) {
+        console.log('Creating auto-payment for:', outstandingAmount);
         // Create automatic payment for the outstanding amount
-        await prisma.payment.create({
+        const payment = await prisma.payment.create({
           data: {
             userId: req.userId!,
             invoiceId: invoice.id,
@@ -213,6 +221,7 @@ invoiceRouter.put('/:invoiceId', async (req: AuthRequest, res: Response) => {
             notes: 'Auto-created when invoice marked as paid',
           },
         });
+        console.log('Auto-payment created:', payment.id);
       }
     }
 

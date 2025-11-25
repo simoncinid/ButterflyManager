@@ -359,9 +359,9 @@ projectRouter.post('/:projectId/time-entries/start', async (req: AuthRequest, re
   }
 });
 
-// Resume time tracking (resume last time entry for this project)
+// Resume time tracking from a specific time entry
 projectRouter.post(
-  '/:projectId/time-entries/resume',
+  '/:projectId/time-entries/:timeEntryId/resume',
   async (req: AuthRequest, res: Response) => {
     try {
       const project = await prisma.project.findFirst({
@@ -385,27 +385,27 @@ projectRouter.post(
         );
       }
 
-      // Find the last time entry for this project
-      const lastEntry = await prisma.timeEntry.findFirst({
+      // Find the specific time entry to resume from
+      const sourceEntry = await prisma.timeEntry.findFirst({
         where: {
+          id: req.params.timeEntryId,
           projectId: req.params.projectId,
           userId: req.userId,
           endedAt: { not: null },
         },
-        orderBy: { endedAt: 'desc' },
       });
 
-      if (!lastEntry) {
-        throw new AppError('No previous time entry found for this project', 404);
+      if (!sourceEntry) {
+        throw new AppError('Time entry not found or still running', 404);
       }
 
-      // Create a new time entry with the same note as the last one
+      // Create a new time entry with the same note as the source entry
       const timeEntry = await prisma.timeEntry.create({
         data: {
           projectId: req.params.projectId,
           userId: req.userId!,
           startedAt: new Date(),
-          note: lastEntry.note,
+          note: sourceEntry.note,
         },
       });
 
