@@ -400,15 +400,23 @@ projectRouter.post(
       }
 
       // Reopen the existing time entry by clearing endedAt
-      // Keep the existing durationMinutes, it will be recalculated when stopped again
+      // Store the previous duration so we can add to it when stopped
+      // We'll use a trick: set startedAt to now minus the previous duration
+      // and clear durationMinutes so it's recalculated when stopped
+      const previousDurationMinutes = existingEntry.durationMinutes || 0;
       const resumedEntry = await prisma.timeEntry.update({
         where: { id: req.params.timeEntryId },
         data: {
           endedAt: null,
-          // Store the previous duration so we can add to it when stopped
-          // We'll use a trick: set startedAt to now minus the previous duration
-          startedAt: new Date(Date.now() - (existingEntry.durationMinutes || 0) * 60 * 1000),
+          startedAt: new Date(Date.now() - previousDurationMinutes * 60 * 1000),
+          durationMinutes: null, // Clear it so it's recalculated when stopped
         },
+      });
+      
+      console.log('Resumed time entry:', {
+        id: resumedEntry.id,
+        previousDurationMinutes,
+        newStartedAt: resumedEntry.startedAt,
       });
 
       res.json({ success: true, data: resumedEntry });
@@ -447,6 +455,14 @@ projectRouter.post(
         (endedAt.getTime() - timeEntry.startedAt.getTime()) / (1000 * 60)
       );
 
+      console.log('Stopping time entry:', {
+        id: timeEntry.id,
+        startedAt: timeEntry.startedAt,
+        endedAt,
+        calculatedDurationMinutes: durationMinutes,
+        previousDurationMinutes: timeEntry.durationMinutes,
+      });
+
       const updatedEntry = await prisma.timeEntry.update({
         where: { id: req.params.timeEntryId },
         data: {
@@ -454,6 +470,11 @@ projectRouter.post(
           durationMinutes,
           note: note || null,
         },
+      });
+      
+      console.log('Stopped time entry:', {
+        id: updatedEntry.id,
+        finalDurationMinutes: updatedEntry.durationMinutes,
       });
 
       res.json({ success: true, data: updatedEntry });
