@@ -24,7 +24,6 @@ export default function Settings() {
   const {
     register: registerProfile,
     handleSubmit: handleProfileSubmit,
-    formState: { errors: profileErrors },
   } = useForm<ProfileForm>({
     defaultValues: {
       name: user?.name || '',

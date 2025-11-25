@@ -1,17 +1,15 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
 import { projectsApi } from '../lib/api';
-import { formatCurrency, formatNumber, getBillingModeLabel, getStatusColor } from '../lib/utils';
+import { formatCurrency, formatNumber, getBillingModeLabel } from '../lib/utils';
 import CreateProjectModal from '../components/CreateProjectModal';
 
 export default function Projects() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [billingFilter, setBillingFilter] = useState<string>('');
-  const queryClient = useQueryClient();
 
   const { data: projects, isLoading } = useQuery({
     queryKey: ['projects', statusFilter, billingFilter],
@@ -21,17 +19,6 @@ export default function Projects() {
       if (billingFilter) params.billingMode = billingFilter;
       const res = await projectsApi.getAll(params);
       return res.data.data;
-    },
-  });
-
-  const archiveMutation = useMutation({
-    mutationFn: (projectId: string) => projectsApi.archive(projectId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Project archived');
-    },
-    onError: () => {
-      toast.error('Failed to archive project');
     },
   });
 

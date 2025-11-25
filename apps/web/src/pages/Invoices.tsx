@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import toast from 'react-hot-toast';
-import { invoicesApi, projectsApi, paymentsApi } from '../lib/api';
+import { invoicesApi } from '../lib/api';
 import { formatCurrency, formatDate } from '../lib/utils';
 import CreateInvoiceModal from '../components/CreateInvoiceModal';
 import CreatePaymentModal from '../components/CreatePaymentModal';
@@ -12,7 +11,6 @@ export default function Invoices() {
   const [showCreatePayment, setShowCreatePayment] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const queryClient = useQueryClient();
 
   const { data: invoices, isLoading } = useQuery({
     queryKey: ['invoices', statusFilter],
