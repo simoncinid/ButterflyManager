@@ -473,6 +473,10 @@ projectRouter.put(
   async (req: AuthRequest, res: Response) => {
     try {
       const { startedAt, endedAt, durationMinutes, note } = req.body;
+      console.log('Update time entry request:', {
+        timeEntryId: req.params.timeEntryId,
+        body: { startedAt, endedAt, durationMinutes, note },
+      });
 
       // Verify project ownership
       const project = await prisma.project.findFirst({
@@ -496,30 +500,49 @@ projectRouter.put(
         throw new AppError('Time entry not found', 404);
       }
 
+      console.log('Existing time entry:', {
+        id: timeEntry.id,
+        durationMinutes: timeEntry.durationMinutes,
+        startedAt: timeEntry.startedAt,
+        endedAt: timeEntry.endedAt,
+      });
+
       const updateData: any = {};
       if (startedAt !== undefined) updateData.startedAt = new Date(startedAt);
       if (endedAt !== undefined) updateData.endedAt = endedAt ? new Date(endedAt) : null;
-      if (durationMinutes !== undefined) updateData.durationMinutes = durationMinutes;
       if (note !== undefined) updateData.note = note || null;
 
-      // Recalculate duration if both startedAt and endedAt are provided
-      if (updateData.startedAt && updateData.endedAt) {
-        updateData.durationMinutes = Math.round(
-          (updateData.endedAt.getTime() - updateData.startedAt.getTime()) / (1000 * 60)
-        );
-      } else if (updateData.startedAt && timeEntry.endedAt) {
-        updateData.durationMinutes = Math.round(
-          (timeEntry.endedAt.getTime() - updateData.startedAt.getTime()) / (1000 * 60)
-        );
-      } else if (timeEntry.startedAt && updateData.endedAt) {
-        updateData.durationMinutes = Math.round(
-          (updateData.endedAt.getTime() - timeEntry.startedAt.getTime()) / (1000 * 60)
-        );
+      // If durationMinutes is explicitly provided, use it
+      if (durationMinutes !== undefined) {
+        updateData.durationMinutes = durationMinutes;
+      } else {
+        // Only recalculate duration if startedAt or endedAt are being changed
+        // and durationMinutes was NOT explicitly provided
+        const newStartedAt = updateData.startedAt || timeEntry.startedAt;
+        const newEndedAt = updateData.endedAt !== undefined ? updateData.endedAt : timeEntry.endedAt;
+        
+        if (newStartedAt && newEndedAt) {
+          updateData.durationMinutes = Math.round(
+            (newEndedAt.getTime() - newStartedAt.getTime()) / (1000 * 60)
+          );
+        } else if (newEndedAt === null) {
+          // If endedAt is being cleared (timer reopened), don't set durationMinutes
+          updateData.durationMinutes = null;
+        }
       }
+
+      console.log('Update data to save:', updateData);
 
       const updatedEntry = await prisma.timeEntry.update({
         where: { id: req.params.timeEntryId },
         data: updateData,
+      });
+
+      console.log('Updated time entry:', {
+        id: updatedEntry.id,
+        durationMinutes: updatedEntry.durationMinutes,
+        startedAt: updatedEntry.startedAt,
+        endedAt: updatedEntry.endedAt,
       });
 
       res.json({ success: true, data: updatedEntry });
