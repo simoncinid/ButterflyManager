@@ -58,6 +58,7 @@ const setTokenCookies = (res: Response, accessToken: string, refreshToken: strin
 // Register
 authRouter.post('/register', async (req: Request, res: Response) => {
   try {
+    console.log('Register request received:', { body: req.body, headers: req.headers });
     const { email, password, name } = registerSchema.parse(req.body);
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -79,13 +80,13 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       data: { user },
     });
   } catch (error) {
+    console.error('Register error:', error);
     if (error instanceof z.ZodError) {
       return res.status(400).json({ success: false, error: error.errors });
     }
     if (error instanceof AppError) {
       return res.status(error.statusCode).json({ success: false, error: error.message });
     }
-    console.error('Register error:', error);
     res.status(500).json({ success: false, error: 'Registration failed' });
   }
 });

@@ -2,6 +2,11 @@ import axios from 'axios';
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
 
+// Log API configuration in development
+if (import.meta.env.DEV) {
+  console.log('API Base URL:', baseURL);
+}
+
 export const api = axios.create({
   baseURL,
   withCredentials: true,
@@ -10,10 +15,32 @@ export const api = axios.create({
   },
 });
 
-// Response interceptor for token refresh
+// Request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    if (import.meta.env.DEV) {
+      console.log('API Request:', config.method?.toUpperCase(), config.url);
+    }
+    return config;
+  },
+  (error) => {
+    console.error('API Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor for token refresh and error logging
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      message: error.message,
+      response: error.response?.data,
+    });
+
     const originalRequest = error.config;
 
     // If error is 401 and we haven't tried to refresh yet
