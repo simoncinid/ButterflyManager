@@ -1,0 +1,218 @@
+import { Router, Response } from 'express';
+import { z } from 'zod';
+import { prisma } from '../index';
+import { AuthRequest } from '../middleware/auth';
+import { AppError } from '../middleware/errorHandler';
+import { InvoiceStatus } from '@prisma/client';
+
+export const invoiceRouter = Router();
+
+const createInvoiceSchema = z.object({
+  projectId: z.string().uuid().optional(),
+  issueDate: z.string(),
+  dueDate: z.string().optional(),
+  amount: z.number().positive(),
+  currency: z.string().default('EUR'),
+  status: z.nativeEnum(InvoiceStatus).optional().default(InvoiceStatus.DRAFT),
+  externalNumber: z.string().optional(),
+  notes: z.string().optional(),
+  periodStart: z.string().optional(),
+  periodEnd: z.string().optional(),
+});
+
+const updateInvoiceSchema = createInvoiceSchema.partial();
+
+// Get all invoices
+invoiceRouter.get('/', async (req: AuthRequest, res: Response) => {
+  try {
+    const { status, startDate, endDate } = req.query;
+
+    const where: any = { userId: req.userId };
+    if (status) where.status = status as InvoiceStatus;
+    if (startDate || endDate) {
+      where.issueDate = {};
+      if (startDate) where.issueDate.gte = new Date(startDate as string);
+      if (endDate) where.issueDate.lte = new Date(endDate as string);
+    }
+
+    const invoices = await prisma.invoice.findMany({
+      where,
+      orderBy: { issueDate: 'desc' },
+      include: {
+        project: {
+          select: { id: true, name: true, clientName: true },
+        },
+        payments: {
+          select: { amount: true },
+        },
+      },
+    });
+
+    // Calculate paid amount for each invoice
+    const invoicesWithPaidAmount = invoices.map((invoice) => ({
+      ...invoice,
+      paidAmount: invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0),
+      outstandingAmount:
+        Number(invoice.amount) -
+        invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0),
+    }));
+
+    res.json({ success: true, data: invoicesWithPaidAmount });
+  } catch (error) {
+    console.error('Get invoices error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get invoices' });
+  }
+});
+
+// Get single invoice
+invoiceRouter.get('/:invoiceId', async (req: AuthRequest, res: Response) => {
+  try {
+    const invoice = await prisma.invoice.findFirst({
+      where: { id: req.params.invoiceId, userId: req.userId },
+      include: {
+        project: true,
+        payments: true,
+      },
+    });
+
+    if (!invoice) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    res.json({
+      success: true,
+      data: {
+        ...invoice,
+        paidAmount: invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0),
+        outstandingAmount:
+          Number(invoice.amount) -
+          invoice.payments.reduce((sum, p) => sum + Number(p.amount), 0),
+      },
+    });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ success: false, error: error.message });
+    }
+    console.error('Get invoice error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get invoice' });
+  }
+});
+
+// Create invoice
+invoiceRouter.post('/', async (req: AuthRequest, res: Response) => {
+  try {
+    const data = createInvoiceSchema.parse(req.body);
+
+    // Verify project ownership if projectId is provided
+    if (data.projectId) {
+      const project = await prisma.project.findFirst({
+        where: { id: data.projectId, userId: req.userId },
+      });
+      if (!project) {
+        throw new AppError('Project not found', 404);
+      }
+    }
+
+    const invoice = await prisma.invoice.create({
+      data: {
+        userId: req.userId!,
+        projectId: data.projectId || null,
+        issueDate: new Date(data.issueDate),
+        dueDate: data.dueDate ? new Date(data.dueDate) : null,
+        amount: data.amount,
+        currency: data.currency,
+        status: data.status,
+        externalNumber: data.externalNumber,
+        notes: data.notes,
+        periodStart: data.periodStart ? new Date(data.periodStart) : null,
+        periodEnd: data.periodEnd ? new Date(data.periodEnd) : null,
+      },
+      include: { project: true },
+    });
+
+    res.status(201).json({ success: true, data: invoice });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: error.errors });
+    }
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ success: false, error: error.message });
+    }
+    console.error('Create invoice error:', error);
+    res.status(500).json({ success: false, error: 'Failed to create invoice' });
+  }
+});
+
+// Update invoice
+invoiceRouter.put('/:invoiceId', async (req: AuthRequest, res: Response) => {
+  try {
+    const data = updateInvoiceSchema.parse(req.body);
+
+    const existing = await prisma.invoice.findFirst({
+      where: { id: req.params.invoiceId, userId: req.userId },
+    });
+
+    if (!existing) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    // Verify project ownership if projectId is being changed
+    if (data.projectId) {
+      const project = await prisma.project.findFirst({
+        where: { id: data.projectId, userId: req.userId },
+      });
+      if (!project) {
+        throw new AppError('Project not found', 404);
+      }
+    }
+
+    const invoice = await prisma.invoice.update({
+      where: { id: req.params.invoiceId },
+      data: {
+        ...data,
+        issueDate: data.issueDate ? new Date(data.issueDate) : undefined,
+        dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+        periodStart: data.periodStart ? new Date(data.periodStart) : undefined,
+        periodEnd: data.periodEnd ? new Date(data.periodEnd) : undefined,
+      },
+      include: { project: true },
+    });
+
+    res.json({ success: true, data: invoice });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: error.errors });
+    }
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ success: false, error: error.message });
+    }
+    console.error('Update invoice error:', error);
+    res.status(500).json({ success: false, error: 'Failed to update invoice' });
+  }
+});
+
+// Delete invoice
+invoiceRouter.delete('/:invoiceId', async (req: AuthRequest, res: Response) => {
+  try {
+    const existing = await prisma.invoice.findFirst({
+      where: { id: req.params.invoiceId, userId: req.userId },
+    });
+
+    if (!existing) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    await prisma.invoice.delete({
+      where: { id: req.params.invoiceId },
+    });
+
+    res.json({ success: true, message: 'Invoice deleted' });
+  } catch (error) {
+    if (error instanceof AppError) {
+      return res.status(error.statusCode).json({ success: false, error: error.message });
+    }
+    console.error('Delete invoice error:', error);
+    res.status(500).json({ success: false, error: 'Failed to delete invoice' });
+  }
+});
+
