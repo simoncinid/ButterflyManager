@@ -35,18 +35,26 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    console.error('API Error:', {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      message: error.message,
-      response: error.response?.data,
-    });
-
     const originalRequest = error.config;
 
+    // Don't log errors for refresh endpoint to avoid spam
+    if (originalRequest?.url !== '/auth/refresh') {
+      console.error('API Error:', {
+        url: originalRequest?.url,
+        method: originalRequest?.method,
+        status: error.response?.status,
+        message: error.message,
+        response: error.response?.data,
+      });
+    }
+
     // If error is 401 and we haven't tried to refresh yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // AND it's not already a refresh request
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      originalRequest?.url !== '/auth/refresh'
+    ) {
       originalRequest._retry = true;
 
       try {
@@ -54,11 +62,19 @@ api.interceptors.response.use(
         await api.post('/auth/refresh');
         // Retry the original request
         return api(originalRequest);
-      } catch {
-        // Refresh failed, redirect to login
+      } catch (refreshError) {
+        // Refresh failed, clear auth and redirect to login
+        console.error('Token refresh failed, redirecting to login');
         window.location.href = '/login';
-        return Promise.reject(error);
+        return Promise.reject(refreshError);
       }
+    }
+
+    // If refresh endpoint returns 401, redirect to login immediately
+    if (error.response?.status === 401 && originalRequest?.url === '/auth/refresh') {
+      console.error('Refresh token invalid, redirecting to login');
+      window.location.href = '/login';
+      return Promise.reject(error);
     }
 
     return Promise.reject(error);
