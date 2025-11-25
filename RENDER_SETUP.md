@@ -17,18 +17,29 @@ Il server non parte perché `DATABASE_URL` non è configurata su Render.
 
 #### 1. DATABASE_URL (OBBLIGATORIA!)
 ```
+mysql://user:password@host:port/database?ssl-mode=REQUIRED
+```
+oppure per PostgreSQL:
+```
 postgresql://user:password@host:port/database?sslmode=require
 ```
 
 **Come ottenerla:**
+- Se usi **DigitalOcean MySQL**:
+  1. Vai su DigitalOcean → Databases → La tua istanza
+  2. Clicca su **Connection Details**
+  3. Copia la **Connection String**
+  4. Dovrebbe essere tipo: `mysql://doadmin:xxx@xxx.db.ondigitalocean.com:25060/defaultdb?ssl-mode=REQUIRED`
+
 - Se usi **DigitalOcean PostgreSQL**:
   1. Vai su DigitalOcean → Databases → La tua istanza
   2. Clicca su **Connection Details**
   3. Copia la **Connection String**
   4. Dovrebbe essere tipo: `postgresql://doadmin:xxx@xxx.db.ondigitalocean.com:25060/defaultdb?sslmode=require`
 
-- Se usi un altro provider PostgreSQL:
-  - Formato: `postgresql://username:password@host:port/database?sslmode=require`
+- Se usi un altro provider:
+  - MySQL: `mysql://username:password@host:port/database?ssl-mode=REQUIRED`
+  - PostgreSQL: `postgresql://username:password@host:port/database?sslmode=require`
 
 #### 2. JWT_SECRET (OBBLIGATORIA!)
 Genera una stringa casuale sicura (minimo 32 caratteri):
@@ -83,9 +94,11 @@ Dopo aver configurato le variabili, controlla i log su Render. Dovresti vedere:
 ## ❌ Se ancora non funziona
 
 1. **Verifica che DATABASE_URL sia corretta:**
-   - Deve iniziare con `postgresql://` o `postgres://`
+   - Deve iniziare con `mysql://` (per MySQL) o `postgresql://`/`postgres://` (per PostgreSQL)
    - Non deve avere spazi o caratteri speciali non codificati
    - La password deve essere URL-encoded se contiene caratteri speciali
+   - Per MySQL: usa `ssl-mode=REQUIRED` (con trattino)
+   - Per PostgreSQL: usa `sslmode=require` (senza trattino)
 
 2. **Verifica che il database sia accessibile:**
    - Controlla che l'IP di Render sia whitelistato nel database (se necessario)

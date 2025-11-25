@@ -11,8 +11,8 @@ if (!DATABASE_URL) {
   process.exit(1);
 }
 
-if (!DATABASE_URL.startsWith('postgresql://') && !DATABASE_URL.startsWith('postgres://')) {
-  console.error('❌ DATABASE_URL must start with postgresql:// or postgres://');
+if (!DATABASE_URL.startsWith('postgresql://') && !DATABASE_URL.startsWith('postgres://') && !DATABASE_URL.startsWith('mysql://')) {
+  console.error('❌ DATABASE_URL must start with postgresql://, postgres://, or mysql://');
   console.error('Current value:', DATABASE_URL ? `${DATABASE_URL.substring(0, 20)}...` : 'undefined');
   process.exit(1);
 }
