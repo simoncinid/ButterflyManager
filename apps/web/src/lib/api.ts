@@ -1,11 +1,13 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
-
-// Log API configuration in development
-if (import.meta.env.DEV) {
-  console.log('API Base URL:', baseURL);
+// Ensure baseURL always ends with /api
+let baseURL = import.meta.env.VITE_API_BASE_URL || '/api';
+if (baseURL && !baseURL.endsWith('/api')) {
+  baseURL = baseURL.endsWith('/') ? `${baseURL}api` : `${baseURL}/api`;
 }
+
+// Log API configuration (always, not just in dev)
+console.log('🔗 API Base URL:', baseURL);
 
 export const api = axios.create({
   baseURL,

@@ -70,6 +70,12 @@ app.use('/api/invoices', authMiddleware, invoiceRouter);
 app.use('/api/payments', authMiddleware, paymentRouter);
 app.use('/api/analytics', authMiddleware, analyticsRouter);
 
+// Debug: Log all unmatched routes
+app.use((req, res, next) => {
+  console.log(`⚠️  Unmatched route: ${req.method} ${req.path}`);
+  next();
+});
+
 // Error handler
 app.use(errorHandler);
 
