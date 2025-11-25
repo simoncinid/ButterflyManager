@@ -98,15 +98,35 @@ authRouter.post('/register', async (req: Request, res: Response) => {
       success: true,
       data: { user },
     });
-  } catch (error) {
-    console.error('Register error:', error);
+  } catch (error: any) {
+    console.error('Register error:', {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      code: error?.code,
+      meta: error?.meta,
+    });
+    
     if (error instanceof z.ZodError) {
+      console.error('Validation error:', error.errors);
       return res.status(400).json({ success: false, error: error.errors });
     }
     if (error instanceof AppError) {
       return res.status(error.statusCode).json({ success: false, error: error.message });
     }
-    res.status(500).json({ success: false, error: 'Registration failed' });
+    
+    // Prisma errors
+    if (error?.code === 'P2002') {
+      console.error('Duplicate entry error');
+      return res.status(400).json({ success: false, error: 'Email already registered' });
+    }
+    
+    console.error('Unexpected register error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Registration failed',
+      message: process.env.NODE_ENV === 'development' ? error?.message : undefined
+    });
   }
 });
 
