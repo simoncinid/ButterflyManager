@@ -71,7 +71,7 @@ app.use('/api/payments', authMiddleware, paymentRouter);
 app.use('/api/analytics', authMiddleware, analyticsRouter);
 
 // Debug: Log all unmatched routes
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`⚠️  Unmatched route: ${req.method} ${req.path}`);
   next();
 });
