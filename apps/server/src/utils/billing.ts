@@ -12,11 +12,23 @@ interface ProjectStats {
  */
 export async function calculateProjectStats(project: Project): Promise<ProjectStats> {
   // Get all completed time entries for the project
+  // Only include entries that are actually completed (have endedAt and durationMinutes > 0)
   const timeEntries = await prisma.timeEntry.findMany({
     where: {
       projectId: project.id,
-      durationMinutes: { not: null },
+      endedAt: { not: null },
+      durationMinutes: { not: null, gt: 0 },
     },
+  });
+
+  console.log(`[calculateProjectStats] Project ${project.id}:`, {
+    timeEntriesCount: timeEntries.length,
+    timeEntries: timeEntries.map(e => ({
+      id: e.id,
+      durationMinutes: e.durationMinutes,
+      startedAt: e.startedAt,
+      endedAt: e.endedAt,
+    })),
   });
 
   // Get all payments for the project
@@ -27,6 +39,11 @@ export async function calculateProjectStats(project: Project): Promise<ProjectSt
   // Calculate total hours
   const totalMinutes = timeEntries.reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
   const totalHours = Math.round((totalMinutes / 60) * 100) / 100;
+  
+  console.log(`[calculateProjectStats] Project ${project.id} totals:`, {
+    totalMinutes,
+    totalHours,
+  });
 
   // Calculate total income from payments
   const totalIncome = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
