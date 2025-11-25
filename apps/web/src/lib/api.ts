@@ -32,49 +32,82 @@ api.interceptors.request.use(
 );
 
 // Response interceptor for token refresh and error logging
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (value?: any) => void;
+  reject: (error?: any) => void;
+}> = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
 
     // Don't log errors for refresh endpoint to avoid spam
-    if (originalRequest?.url !== '/auth/refresh') {
+    if (originalRequest?.url !== '/auth/refresh' && originalRequest?.url !== '/auth/me') {
       console.error('API Error:', {
         url: originalRequest?.url,
         method: originalRequest?.method,
         status: error.response?.status,
         message: error.message,
-        response: error.response?.data,
       });
     }
 
-    // If error is 401 and we haven't tried to refresh yet
-    // AND it's not already a refresh request
+    // Don't try to refresh for auth endpoints (except if it's a protected route that needs auth)
     if (
-      error.response?.status === 401 &&
-      !originalRequest._retry &&
-      originalRequest?.url !== '/auth/refresh'
+      originalRequest?.url === '/auth/refresh' ||
+      originalRequest?.url === '/auth/login' ||
+      originalRequest?.url === '/auth/register' ||
+      originalRequest?.url === '/auth/logout'
     ) {
+      return Promise.reject(error);
+    }
+
+    // If error is 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(() => {
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
       originalRequest._retry = true;
+      isRefreshing = true;
 
       try {
         // Try to refresh token
         await api.post('/auth/refresh');
+        isRefreshing = false;
+        processQueue(null, null);
         // Retry the original request
         return api(originalRequest);
-      } catch (refreshError) {
-        // Refresh failed, clear auth and redirect to login
-        console.error('Token refresh failed, redirecting to login');
-        window.location.href = '/login';
+      } catch (refreshError: any) {
+        isRefreshing = false;
+        processQueue(refreshError, null);
+        // Refresh failed, redirect to login only if not already on login page
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       }
-    }
-
-    // If refresh endpoint returns 401, redirect to login immediately
-    if (error.response?.status === 401 && originalRequest?.url === '/auth/refresh') {
-      console.error('Refresh token invalid, redirecting to login');
-      window.location.href = '/login';
-      return Promise.reject(error);
     }
 
     return Promise.reject(error);

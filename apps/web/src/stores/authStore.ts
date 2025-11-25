@@ -12,6 +12,7 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isCheckingAuth: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -19,32 +20,68 @@ interface AuthState {
   updateProfile: (data: { name?: string; currentPassword?: string; newPassword?: string }) => Promise<void>;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  isCheckingAuth: false,
 
   login: async (email: string, password: string) => {
     const response = await api.post('/auth/login', { email, password });
-    set({ user: response.data.data.user, isAuthenticated: true });
+    set({ user: response.data.data.user, isAuthenticated: true, isLoading: false });
   },
 
   register: async (email: string, password: string, name?: string) => {
     const response = await api.post('/auth/register', { email, password, name });
-    set({ user: response.data.data.user, isAuthenticated: true });
+    set({ user: response.data.data.user, isAuthenticated: true, isLoading: false });
   },
 
   logout: async () => {
-    await api.post('/auth/logout');
-    set({ user: null, isAuthenticated: false });
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // Ignore errors on logout
+    }
+    set({ user: null, isAuthenticated: false, isLoading: false, isCheckingAuth: false });
   },
 
   checkAuth: async () => {
+    // Prevent multiple simultaneous calls
+    if (get().isCheckingAuth) {
+      return;
+    }
+
+    // If already loaded and authenticated, don't check again
+    if (!get().isLoading && get().isAuthenticated) {
+      return;
+    }
+
+    set({ isCheckingAuth: true });
+
     try {
       const response = await api.get('/auth/me');
-      set({ user: response.data.data.user, isAuthenticated: true, isLoading: false });
-    } catch {
-      set({ user: null, isAuthenticated: false, isLoading: false });
+      set({ 
+        user: response.data.data.user, 
+        isAuthenticated: true, 
+        isLoading: false,
+        isCheckingAuth: false 
+      });
+    } catch (error: any) {
+      // If 401, don't try to refresh - just set as not authenticated
+      if (error.response?.status === 401) {
+        set({ 
+          user: null, 
+          isAuthenticated: false, 
+          isLoading: false,
+          isCheckingAuth: false 
+        });
+      } else {
+        // For other errors, keep loading state but mark as not checking
+        set({ 
+          isLoading: false,
+          isCheckingAuth: false 
+        });
+      }
     }
   },
 

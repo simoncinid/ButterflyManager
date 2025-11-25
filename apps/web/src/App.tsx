@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import { useThemeStore } from './stores/themeStore';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
@@ -18,9 +18,13 @@ import Settings from './pages/Settings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
-    checkAuth();
+    if (!hasCheckedRef.current) {
+      hasCheckedRef.current = true;
+      checkAuth();
+    }
   }, [checkAuth]);
 
   if (isLoading) {
@@ -40,9 +44,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
+  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
-    checkAuth();
+    if (!hasCheckedRef.current) {
+      hasCheckedRef.current = true;
+      checkAuth();
+    }
   }, [checkAuth]);
 
   if (isLoading) {
