@@ -58,23 +58,42 @@ const setTokenCookies = (res: Response, accessToken: string, refreshToken: strin
 // Register
 authRouter.post('/register', async (req: Request, res: Response) => {
   try {
-    console.log('Register request received:', { body: req.body, headers: req.headers });
+    console.log('Register request received:', { 
+      body: { ...req.body, password: '***' }, 
+      hasJwtSecret: !!process.env.JWT_SECRET,
+      hasJwtRefreshSecret: !!process.env.JWT_REFRESH_SECRET,
+    });
+    
+    // Validate environment variables
+    if (!process.env.JWT_SECRET || !process.env.JWT_REFRESH_SECRET) {
+      console.error('Missing JWT secrets in environment variables');
+      throw new AppError('Server configuration error', 500);
+    }
+
     const { email, password, name } = registerSchema.parse(req.body);
+    console.log('Validation passed, checking existing user...');
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
+      console.log('User already exists:', email);
       throw new AppError('Email already registered', 400);
     }
 
+    console.log('Hashing password...');
     const passwordHash = await bcrypt.hash(password, 12);
+    
+    console.log('Creating user...');
     const user = await prisma.user.create({
       data: { email, passwordHash, name },
       select: { id: true, email: true, name: true, createdAt: true },
     });
+    console.log('User created:', user.id);
 
+    console.log('Generating tokens...');
     const { accessToken, refreshToken } = generateTokens(user.id);
     setTokenCookies(res, accessToken, refreshToken);
 
+    console.log('Registration successful');
     res.status(201).json({
       success: true,
       data: { user },
