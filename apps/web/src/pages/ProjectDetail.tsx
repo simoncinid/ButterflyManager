@@ -23,6 +23,8 @@ export default function ProjectDetail() {
   const [timerElapsed, setTimerElapsed] = useState(0);
   const [stopNote, setStopNote] = useState('');
   const [showStopModal, setShowStopModal] = useState(false);
+  const [editingTodo, setEditingTodo] = useState<any>(null);
+  const [editingTimeEntry, setEditingTimeEntry] = useState<any>(null);
 
   // Fetch project data
   const { data: project, isLoading, refetch: refetchProject } = useQuery({
@@ -94,21 +96,81 @@ export default function ProjectDetail() {
   });
 
   const createTodoMutation = useMutation({
-    mutationFn: (data: { title: string; priority?: string }) =>
+    mutationFn: (data: { title: string; description?: string; priority?: string; dueDate?: string }) =>
       projectsApi.createTodo(projectId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       toast.success('Todo created!');
+      setNewTodoTitle('');
+      setNewTodoDescription('');
+      setNewTodoPriority('MEDIUM');
+      setNewTodoDueDate('');
+    },
+  });
+
+  const updateTodoMutation = useMutation({
+    mutationFn: ({ todoId, data }: { todoId: string; data: any }) =>
+      todosApi.update(todoId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      setEditingTodo(null);
+      toast.success('Todo updated!');
+    },
+    onError: () => {
+      toast.error('Failed to update todo');
+    },
+  });
+
+  const deleteTodoMutation = useMutation({
+    mutationFn: (todoId: string) => todosApi.delete(todoId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Todo deleted!');
+    },
+    onError: () => {
+      toast.error('Failed to delete todo');
+    },
+  });
+
+  const updateTimeEntryMutation = useMutation({
+    mutationFn: ({ timeEntryId, data }: { timeEntryId: string; data: any }) =>
+      projectsApi.updateTimeEntry(projectId!, timeEntryId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      setEditingTimeEntry(null);
+      toast.success('Time entry updated!');
+    },
+    onError: () => {
+      toast.error('Failed to update time entry');
+    },
+  });
+
+  const deleteTimeEntryMutation = useMutation({
+    mutationFn: (timeEntryId: string) =>
+      projectsApi.deleteTimeEntry(projectId!, timeEntryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      toast.success('Time entry deleted!');
+    },
+    onError: () => {
+      toast.error('Failed to delete time entry');
     },
   });
 
   const [newTodoTitle, setNewTodoTitle] = useState('');
+  const [newTodoDescription, setNewTodoDescription] = useState('');
+  const [newTodoPriority, setNewTodoPriority] = useState('MEDIUM');
+  const [newTodoDueDate, setNewTodoDueDate] = useState('');
 
   const handleCreateTodo = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTodoTitle.trim()) return;
-    createTodoMutation.mutate({ title: newTodoTitle.trim() });
-    setNewTodoTitle('');
+    createTodoMutation.mutate({
+      title: newTodoTitle.trim(),
+      description: newTodoDescription.trim() || undefined,
+      priority: newTodoPriority,
+      dueDate: newTodoDueDate || undefined,
+    });
   };
 
   if (isLoading) {
@@ -322,7 +384,7 @@ export default function ProjectDetail() {
           <div className="divide-y divide-slate-200 dark:divide-slate-700">
             {project.timeEntries?.map((entry: any) => (
               <div key={entry.id} className="px-6 py-4 flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <p className="font-medium text-slate-900 dark:text-white">
                     {entry.note || 'No description'}
                   </p>
@@ -331,16 +393,44 @@ export default function ProjectDetail() {
                     {entry.endedAt && ` - ${formatDateTime(entry.endedAt)}`}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-slate-900 dark:text-white">
-                    {entry.endedAt 
-                      ? (entry.durationMinutes ? formatMinutesToHours(entry.durationMinutes) : '< 1m')
-                      : 'Running...'}
-                  </p>
-                  {project.billingMode === 'HOURLY' && entry.durationMinutes && (
-                    <p className="text-sm text-amber-500">
-                      {formatCurrency((Number(project.hourlyRate) || 0) * (entry.durationMinutes / 60))}
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="font-semibold text-slate-900 dark:text-white">
+                      {entry.endedAt 
+                        ? (entry.durationMinutes ? formatMinutesToHours(entry.durationMinutes) : '< 1m')
+                        : 'Running...'}
                     </p>
+                    {project.billingMode === 'HOURLY' && entry.durationMinutes && (
+                      <p className="text-sm text-amber-500">
+                        {formatCurrency((Number(project.hourlyRate) || 0) * (entry.durationMinutes / 60))}
+                      </p>
+                    )}
+                  </div>
+                  {entry.endedAt && (
+                    <>
+                      <button
+                        onClick={() => setEditingTimeEntry(entry)}
+                        className="p-1.5 text-slate-500 hover:text-blue-500 transition-colors"
+                        title="Edit"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm('Are you sure you want to delete this time entry?')) {
+                            deleteTimeEntryMutation.mutate(entry.id);
+                          }
+                        }}
+                        className="p-1.5 text-slate-500 hover:text-red-500 transition-colors"
+                        title="Delete"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -367,17 +457,47 @@ export default function ProjectDetail() {
           </div>
           <div className="p-6">
             {/* Add Todo Form */}
-            <form onSubmit={handleCreateTodo} className="flex gap-3 mb-6">
-              <input
-                type="text"
-                value={newTodoTitle}
-                onChange={(e) => setNewTodoTitle(e.target.value)}
-                placeholder="Add a new todo..."
-                className="input flex-1"
-              />
-              <button type="submit" className="btn-primary">
-                Add
-              </button>
+            <form onSubmit={handleCreateTodo} className="space-y-3 mb-6">
+              <div className="flex gap-3">
+                <input
+                  type="text"
+                  value={newTodoTitle}
+                  onChange={(e) => setNewTodoTitle(e.target.value)}
+                  placeholder="Todo title..."
+                  className="input flex-1"
+                  required
+                />
+                <button type="submit" className="btn-primary">
+                  Add
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <textarea
+                  value={newTodoDescription}
+                  onChange={(e) => setNewTodoDescription(e.target.value)}
+                  placeholder="Description (optional)..."
+                  className="input md:col-span-2"
+                  rows={2}
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={newTodoPriority}
+                    onChange={(e) => setNewTodoPriority(e.target.value)}
+                    className="input flex-1"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                  </select>
+                  <input
+                    type="date"
+                    value={newTodoDueDate}
+                    onChange={(e) => setNewTodoDueDate(e.target.value)}
+                    className="input flex-1"
+                    placeholder="Due date"
+                  />
+                </div>
+              </div>
             </form>
 
             {/* Todo List */}
@@ -422,10 +542,42 @@ export default function ProjectDetail() {
                         {todo.description}
                       </p>
                     )}
+                    {todo.dueDate && (
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Due: {formatDate(todo.dueDate)}
+                        {new Date(todo.dueDate) < new Date() && !todo.completed && (
+                          <span className="ml-2 text-red-500">Overdue</span>
+                        )}
+                      </p>
+                    )}
                   </div>
-                  <span className={`badge text-xs ${priorityColors[todo.priority]}`}>
-                    {getPriorityLabel(todo.priority)}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`badge text-xs ${priorityColors[todo.priority]}`}>
+                      {getPriorityLabel(todo.priority)}
+                    </span>
+                    <button
+                      onClick={() => setEditingTodo(todo)}
+                      className="p-1.5 text-slate-500 hover:text-blue-500 transition-colors"
+                      title="Edit"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Are you sure you want to delete this todo?')) {
+                          deleteTodoMutation.mutate(todo.id);
+                        }
+                      }}
+                      className="p-1.5 text-slate-500 hover:text-red-500 transition-colors"
+                      title="Delete"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               ))}
               {(!project.todos || project.todos.length === 0) && (
@@ -563,6 +715,209 @@ export default function ProjectDetail() {
                 className="btn-primary flex-1 bg-red-500 hover:bg-red-600"
               >
                 {stopTimerMutation.isPending ? 'Stopping...' : 'Stop Timer'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit Todo Modal */}
+      {editingTodo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setEditingTodo(null)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6"
+          >
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+              Edit Todo
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={editingTodo.title}
+                  onChange={(e) => setEditingTodo({ ...editingTodo, title: e.target.value })}
+                  className="input w-full"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editingTodo.description || ''}
+                  onChange={(e) => setEditingTodo({ ...editingTodo, description: e.target.value })}
+                  className="input w-full"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Priority
+                  </label>
+                  <select
+                    value={editingTodo.priority}
+                    onChange={(e) => setEditingTodo({ ...editingTodo, priority: e.target.value })}
+                    className="input w-full"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editingTodo.dueDate ? new Date(editingTodo.dueDate).toISOString().split('T')[0] : ''}
+                    onChange={(e) => setEditingTodo({ ...editingTodo, dueDate: e.target.value || null })}
+                    className="input w-full"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="completed"
+                  checked={editingTodo.completed}
+                  onChange={(e) => setEditingTodo({ ...editingTodo, completed: e.target.checked })}
+                  className="w-4 h-4 rounded border-slate-300"
+                />
+                <label htmlFor="completed" className="text-sm text-slate-700 dark:text-slate-300">
+                  Completed
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setEditingTodo(null)}
+                className="btn-ghost flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  updateTodoMutation.mutate({
+                    todoId: editingTodo.id,
+                    data: {
+                      title: editingTodo.title,
+                      description: editingTodo.description || null,
+                      priority: editingTodo.priority,
+                      dueDate: editingTodo.dueDate ? new Date(editingTodo.dueDate).toISOString() : null,
+                      completed: editingTodo.completed,
+                    },
+                  });
+                }}
+                disabled={updateTodoMutation.isPending}
+                className="btn-primary flex-1"
+              >
+                {updateTodoMutation.isPending ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Edit Time Entry Modal */}
+      {editingTimeEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setEditingTimeEntry(null)}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6"
+          >
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+              Edit Time Entry
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Note
+                </label>
+                <textarea
+                  value={editingTimeEntry.note || ''}
+                  onChange={(e) => setEditingTimeEntry({ ...editingTimeEntry, note: e.target.value })}
+                  className="input w-full"
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Start Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={new Date(editingTimeEntry.startedAt).toISOString().slice(0, 16)}
+                    onChange={(e) => setEditingTimeEntry({ ...editingTimeEntry, startedAt: e.target.value })}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    End Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={editingTimeEntry.endedAt ? new Date(editingTimeEntry.endedAt).toISOString().slice(0, 16) : ''}
+                    onChange={(e) => setEditingTimeEntry({ ...editingTimeEntry, endedAt: e.target.value || null })}
+                    className="input w-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Duration (minutes)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editingTimeEntry.durationMinutes || ''}
+                  onChange={(e) => setEditingTimeEntry({ ...editingTimeEntry, durationMinutes: parseInt(e.target.value) || 0 })}
+                  className="input w-full"
+                  placeholder="Auto-calculated from times"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setEditingTimeEntry(null)}
+                className="btn-ghost flex-1"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  updateTimeEntryMutation.mutate({
+                    timeEntryId: editingTimeEntry.id,
+                    data: {
+                      startedAt: new Date(editingTimeEntry.startedAt).toISOString(),
+                      endedAt: editingTimeEntry.endedAt ? new Date(editingTimeEntry.endedAt).toISOString() : null,
+                      durationMinutes: editingTimeEntry.durationMinutes,
+                      note: editingTimeEntry.note || null,
+                    },
+                  });
+                }}
+                disabled={updateTimeEntryMutation.isPending}
+                className="btn-primary flex-1"
+              >
+                {updateTimeEntryMutation.isPending ? 'Saving...' : 'Save'}
               </button>
             </div>
           </motion.div>

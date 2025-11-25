@@ -404,6 +404,114 @@ projectRouter.post(
   }
 );
 
+// Update time entry
+projectRouter.put(
+  '/:projectId/time-entries/:timeEntryId',
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { startedAt, endedAt, durationMinutes, note } = req.body;
+
+      // Verify project ownership
+      const project = await prisma.project.findFirst({
+        where: { id: req.params.projectId, userId: req.userId },
+      });
+
+      if (!project) {
+        throw new AppError('Project not found', 404);
+      }
+
+      // Verify time entry belongs to project and user
+      const timeEntry = await prisma.timeEntry.findFirst({
+        where: {
+          id: req.params.timeEntryId,
+          projectId: req.params.projectId,
+          userId: req.userId,
+        },
+      });
+
+      if (!timeEntry) {
+        throw new AppError('Time entry not found', 404);
+      }
+
+      const updateData: any = {};
+      if (startedAt !== undefined) updateData.startedAt = new Date(startedAt);
+      if (endedAt !== undefined) updateData.endedAt = endedAt ? new Date(endedAt) : null;
+      if (durationMinutes !== undefined) updateData.durationMinutes = durationMinutes;
+      if (note !== undefined) updateData.note = note || null;
+
+      // Recalculate duration if both startedAt and endedAt are provided
+      if (updateData.startedAt && updateData.endedAt) {
+        updateData.durationMinutes = Math.round(
+          (updateData.endedAt.getTime() - updateData.startedAt.getTime()) / (1000 * 60)
+        );
+      } else if (updateData.startedAt && timeEntry.endedAt) {
+        updateData.durationMinutes = Math.round(
+          (timeEntry.endedAt.getTime() - updateData.startedAt.getTime()) / (1000 * 60)
+        );
+      } else if (timeEntry.startedAt && updateData.endedAt) {
+        updateData.durationMinutes = Math.round(
+          (updateData.endedAt.getTime() - timeEntry.startedAt.getTime()) / (1000 * 60)
+        );
+      }
+
+      const updatedEntry = await prisma.timeEntry.update({
+        where: { id: req.params.timeEntryId },
+        data: updateData,
+      });
+
+      res.json({ success: true, data: updatedEntry });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ success: false, error: error.message });
+      }
+      console.error('Update time entry error:', error);
+      res.status(500).json({ success: false, error: 'Failed to update time entry' });
+    }
+  }
+);
+
+// Delete time entry
+projectRouter.delete(
+  '/:projectId/time-entries/:timeEntryId',
+  async (req: AuthRequest, res: Response) => {
+    try {
+      // Verify project ownership
+      const project = await prisma.project.findFirst({
+        where: { id: req.params.projectId, userId: req.userId },
+      });
+
+      if (!project) {
+        throw new AppError('Project not found', 404);
+      }
+
+      // Verify time entry belongs to project and user
+      const timeEntry = await prisma.timeEntry.findFirst({
+        where: {
+          id: req.params.timeEntryId,
+          projectId: req.params.projectId,
+          userId: req.userId,
+        },
+      });
+
+      if (!timeEntry) {
+        throw new AppError('Time entry not found', 404);
+      }
+
+      await prisma.timeEntry.delete({
+        where: { id: req.params.timeEntryId },
+      });
+
+      res.json({ success: true, message: 'Time entry deleted' });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return res.status(error.statusCode).json({ success: false, error: error.message });
+      }
+      console.error('Delete time entry error:', error);
+      res.status(500).json({ success: false, error: 'Failed to delete time entry' });
+    }
+  }
+);
+
 // Get project todos
 projectRouter.get('/:projectId/todos', async (req: AuthRequest, res: Response) => {
   try {

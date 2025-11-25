@@ -132,6 +132,10 @@ export const projectsApi = {
   startTimer: (projectId: string) => api.post(`/projects/${projectId}/time-entries/start`),
   stopTimer: (projectId: string, timeEntryId: string, note?: string) =>
     api.post(`/projects/${projectId}/time-entries/${timeEntryId}/stop`, { note }),
+  updateTimeEntry: (projectId: string, timeEntryId: string, data: any) =>
+    api.put(`/projects/${projectId}/time-entries/${timeEntryId}`, data),
+  deleteTimeEntry: (projectId: string, timeEntryId: string) =>
+    api.delete(`/projects/${projectId}/time-entries/${timeEntryId}`),
   
   // Todos
   getTodos: (projectId: string, params?: { filter?: string; sortBy?: string }) =>
