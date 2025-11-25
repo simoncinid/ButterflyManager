@@ -42,7 +42,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Request logging middleware
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
