@@ -124,6 +124,7 @@ analyticsRouter.get('/time', async (req: AuthRequest, res: Response) => {
       userId: req.userId,
       startedAt: { gte: startDate },
       durationMinutes: { not: null },
+      endedAt: { not: null },
     };
 
     if (projectId) {
@@ -156,6 +157,61 @@ analyticsRouter.get('/time', async (req: AuthRequest, res: Response) => {
       }));
 
       res.json({ success: true, data });
+    } else if (groupBy === 'period-project') {
+      // Group by period AND project (for stacked bar chart)
+      const timeByPeriodProject: Record<string, Record<string, { name: string; minutes: number }>> = {};
+
+      timeEntries.forEach((entry) => {
+        const date = new Date(entry.startedAt);
+        let periodKey: string;
+
+        if (period === 'day') {
+          periodKey = date.toISOString().split('T')[0];
+        } else if (period === 'week') {
+          const weekStart = new Date(date);
+          weekStart.setDate(date.getDate() - date.getDay());
+          periodKey = weekStart.toISOString().split('T')[0];
+        } else {
+          periodKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        }
+
+        if (!timeByPeriodProject[periodKey]) {
+          timeByPeriodProject[periodKey] = {};
+        }
+
+        const projectId = entry.projectId;
+        if (!timeByPeriodProject[periodKey][projectId]) {
+          timeByPeriodProject[periodKey][projectId] = { name: entry.project.name, minutes: 0 };
+        }
+        timeByPeriodProject[periodKey][projectId].minutes += entry.durationMinutes || 0;
+      });
+
+      // Get all unique project IDs and names
+      const allProjects = new Map<string, string>();
+      Object.values(timeByPeriodProject).forEach((projects) => {
+        Object.entries(projects).forEach(([projectId, { name }]) => {
+          allProjects.set(projectId, name);
+        });
+      });
+
+      // Build data structure for stacked bar chart
+      const periods = Object.keys(timeByPeriodProject).sort();
+      const data = periods.map((periodKey) => {
+        const periodData: any = { period: periodKey };
+        allProjects.forEach((projectName, projectId) => {
+          const projectData = timeByPeriodProject[periodKey][projectId];
+          const minutes = projectData?.minutes || 0;
+          // Format as hours.minutes (e.g., 100 minutes = 1.40)
+          const hours = Math.floor(minutes / 60);
+          const mins = minutes % 60;
+          const totalHours = parseFloat(`${hours}.${String(mins).padStart(2, '0')}`);
+          periodData[projectId] = totalHours;
+          periodData[`${projectId}_name`] = projectName;
+        });
+        return periodData;
+      });
+
+      res.json({ success: true, data, projects: Array.from(allProjects.entries()).map(([id, name]) => ({ id, name })) });
     } else {
       // Group by period (day/week/month)
       const timeByPeriod: Record<string, number> = {};
@@ -215,9 +271,16 @@ analyticsRouter.get('/dashboard', async (req: AuthRequest, res: Response) => {
         userId: req.userId,
         startedAt: { gte: startOfMonth },
         durationMinutes: { not: null },
+        endedAt: { not: null },
       },
       _sum: { durationMinutes: true },
     });
+    
+    // Calculate hours in format hours.minutes (e.g., 100 minutes = 1.40)
+    const totalMinutes = monthTimeEntries._sum.durationMinutes || 0;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const totalHoursMonth = parseFloat(`${hours}.${String(minutes).padStart(2, '0')}`);
 
     // Active projects count
     const activeProjectsCount = await prisma.project.count({
@@ -289,8 +352,7 @@ analyticsRouter.get('/dashboard', async (req: AuthRequest, res: Response) => {
       success: true,
       data: {
         totalIncomeMonth: Number(monthPayments._sum.amount) || 0,
-        totalHoursMonth:
-          Math.round(((monthTimeEntries._sum.durationMinutes || 0) / 60) * 100) / 100,
+        totalHoursMonth,
         activeProjectsCount,
         incomeByMonth: Object.entries(incomeByMonth)
           .map(([period, totalAmount]) => ({ period, totalAmount, currency: 'EUR' }))
