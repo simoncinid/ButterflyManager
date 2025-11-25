@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { analyticsApi } from '../lib/api';
-import { formatCurrency, formatNumber, formatMonthYear, getBillingModeLabel } from '../lib/utils';
+import { formatCurrency, formatNumber, formatMonthYear, getBillingModeLabel, formatHoursMinutes } from '../lib/utils';
 
 export default function Dashboard() {
   const { data: dashboardData, isLoading } = useQuery({
@@ -228,7 +228,7 @@ export default function Dashboard() {
                     {formatCurrency(project.totalIncome)}
                   </p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {formatNumber(project.totalHours)}h tracked
+                    {formatHoursMinutes(project.totalHours)}h tracked
                   </p>
                 </div>
               </Link>

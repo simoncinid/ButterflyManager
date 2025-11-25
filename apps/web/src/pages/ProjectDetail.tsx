@@ -13,6 +13,7 @@ import {
   getBillingModeLabel,
   formatDuration,
   getPriorityLabel,
+  formatHoursMinutes,
 } from '../lib/utils';
 
 export default function ProjectDetail() {
@@ -311,7 +312,7 @@ export default function ProjectDetail() {
             <div className="card p-6">
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Total Hours</p>
               <p className="text-3xl font-bold text-slate-900 dark:text-white">
-                {formatNumber(project.totalHours)}h
+                {formatHoursMinutes(project.totalHours)}h
               </p>
             </div>
             <div className="card p-6">

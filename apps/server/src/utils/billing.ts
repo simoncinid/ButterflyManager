@@ -36,12 +36,17 @@ export async function calculateProjectStats(project: Project): Promise<ProjectSt
     where: { projectId: project.id },
   });
 
-  // Calculate total hours
+  // Calculate total hours in format hours.minutes (e.g., 1.40 = 1 hour 40 minutes)
   const totalMinutes = timeEntries.reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
-  const totalHours = Math.round((totalMinutes / 60) * 100) / 100;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  // Format as hours.minutes (e.g., 100 minutes = 1.40, not 1.67)
+  const totalHours = parseFloat(`${hours}.${String(minutes).padStart(2, '0')}`);
   
   console.log(`[calculateProjectStats] Project ${project.id} totals:`, {
     totalMinutes,
+    hours,
+    minutes,
     totalHours,
   });
 

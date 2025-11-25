@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { projectsApi } from '../lib/api';
-import { formatCurrency, formatNumber, getBillingModeLabel } from '../lib/utils';
+import { formatCurrency, formatNumber, getBillingModeLabel, formatHoursMinutes } from '../lib/utils';
 import CreateProjectModal from '../components/CreateProjectModal';
 
 export default function Projects() {
@@ -153,7 +153,7 @@ export default function Projects() {
                     <div>
                       <p className="text-xs text-slate-500 dark:text-slate-400">Total Hours</p>
                       <p className="text-lg font-semibold text-slate-900 dark:text-white">
-                        {formatNumber(project.totalHours)}h
+                        {formatHoursMinutes(project.totalHours)}h
                       </p>
                     </div>
                     <div>

@@ -15,6 +15,40 @@ export function formatCurrency(amount: number, currency: string = 'EUR'): string
   }).format(amount);
 }
 
+/**
+ * Format hours in "hours.minutes" format (e.g., 1.40 = 1h 40m)
+ * The backend returns numbers in format hours.minutes (not decimal hours)
+ * JavaScript converts 1.40 to 1.4, so we need to reconstruct the format
+ * We assume: if decimal part < 0.6, it's in hours.minutes format (0.40 = 40 min)
+ * Otherwise, it's decimal hours (0.67 = 40 min)
+ */
+export function formatHoursMinutes(hoursMinutes: number): string {
+  const hours = Math.floor(hoursMinutes);
+  const decimal = hoursMinutes - hours;
+  
+  // If decimal is < 0.6, assume it's in hours.minutes format (e.g., 1.40 -> 1h 40m)
+  // Otherwise, it's decimal hours (e.g., 1.67 -> 1h 40m)
+  let minutes: number;
+  if (decimal < 0.6) {
+    // Format: hours.minutes (e.g., 1.40)
+    // JavaScript sees 1.40 as 1.4, so we multiply by 100 to get 40
+    minutes = Math.round(decimal * 100);
+  } else {
+    // Format: decimal hours (e.g., 1.67)
+    // Convert to minutes: 0.67 * 60 = 40.2 -> 40
+    minutes = Math.round(decimal * 60);
+  }
+  
+  // Ensure minutes are 0-59
+  if (minutes >= 60) {
+    const extraHours = Math.floor(minutes / 60);
+    const finalMinutes = minutes % 60;
+    return `${hours + extraHours}.${String(finalMinutes).padStart(2, '0')}`;
+  }
+  
+  return `${hours}.${String(minutes).padStart(2, '0')}`;
+}
+
 export function formatNumber(value: number, decimals: number = 2): string {
   return new Intl.NumberFormat('it-IT', {
     minimumFractionDigits: decimals,
