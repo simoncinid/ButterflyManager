@@ -12,18 +12,19 @@ const updateTimeEntrySchema = z.object({
   note: z.string().optional(),
 });
 
-// Get user's active time entry
+// Get user's active time entries (can have multiple on different projects)
 timeEntryRouter.get('/active', async (req: AuthRequest, res: Response) => {
   try {
-    const activeEntry = await prisma.timeEntry.findFirst({
+    const activeEntries = await prisma.timeEntry.findMany({
       where: { userId: req.userId, endedAt: null },
       include: { project: true },
+      orderBy: { startedAt: 'desc' },
     });
 
-    res.json({ success: true, data: activeEntry });
+    res.json({ success: true, data: activeEntries });
   } catch (error) {
-    console.error('Get active time entry error:', error);
-    res.status(500).json({ success: false, error: 'Failed to get active time entry' });
+    console.error('Get active time entries error:', error);
+    res.status(500).json({ success: false, error: 'Failed to get active time entries' });
   }
 });
 

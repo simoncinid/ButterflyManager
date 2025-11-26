@@ -129,10 +129,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             })}
           </nav>
 
-          {/* Active Timer Widget */}
-          {activeTimerData && (
-            <div className="px-4 pb-4">
-              <ActiveTimer timeEntry={activeTimerData} />
+          {/* Active Timers Widget */}
+          {activeTimerData && activeTimerData.length > 0 && (
+            <div className="px-4 pb-4 space-y-2 max-h-48 overflow-y-auto">
+              {activeTimerData.map((timer: any) => (
+                <ActiveTimer key={timer.id} timeEntry={timer} />
+              ))}
             </div>
           )}
 

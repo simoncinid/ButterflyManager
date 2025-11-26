@@ -328,15 +328,14 @@ projectRouter.post('/:projectId/time-entries/start', async (req: AuthRequest, re
       throw new AppError('Project not found', 404);
     }
 
-    // Check if user has an active session
-    const activeEntry = await prisma.timeEntry.findFirst({
-      where: { userId: req.userId, endedAt: null },
-      include: { project: { select: { name: true } } },
+    // Check if user already has an active timer on THIS project (allow multiple timers on different projects)
+    const activeEntryOnThisProject = await prisma.timeEntry.findFirst({
+      where: { userId: req.userId, projectId: req.params.projectId, endedAt: null },
     });
 
-    if (activeEntry) {
+    if (activeEntryOnThisProject) {
       throw new AppError(
-        `You have an active session on project "${activeEntry.project.name}". Stop it first.`,
+        `You already have a timer running on this project.`,
         400
       );
     }
@@ -372,15 +371,14 @@ projectRouter.post(
         throw new AppError('Project not found', 404);
       }
 
-      // Check if user has an active session
-      const activeEntry = await prisma.timeEntry.findFirst({
-        where: { userId: req.userId, endedAt: null },
-        include: { project: { select: { name: true } } },
+      // Check if user already has an active timer on THIS project (allow multiple timers on different projects)
+      const activeEntryOnThisProject = await prisma.timeEntry.findFirst({
+        where: { userId: req.userId, projectId: req.params.projectId, endedAt: null },
       });
 
-      if (activeEntry) {
+      if (activeEntryOnThisProject) {
         throw new AppError(
-          `You have an active session on project "${activeEntry.project.name}". Stop it first.`,
+          `You already have a timer running on this project.`,
           400
         );
       }
