@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { todosApi, projectsApi } from '../lib/api';
 import { formatDate } from '../lib/utils';
-import { TodoPriority } from '@butterflymanager/types';
+
+type TodoPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 interface TodoWithProject {
   id: string;
