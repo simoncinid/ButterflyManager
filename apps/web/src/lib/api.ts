@@ -158,6 +158,8 @@ export const timeEntriesApi = {
 
 // Todos
 export const todosApi = {
+  getAll: (params?: { projectId?: string; priority?: string; completed?: string; overdue?: string; sortBy?: string }) =>
+    api.get('/todos', { params }),
   update: (id: string, data: any) => api.put(`/todos/${id}`, data),
   delete: (id: string) => api.delete(`/todos/${id}`),
 };

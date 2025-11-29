@@ -14,6 +14,7 @@ import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import Invoices from './pages/Invoices';
+import Todos from './pages/Todos';
 import Settings from './pages/Settings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -140,6 +141,16 @@ function App() {
           <ProtectedRoute>
             <DashboardLayout>
               <Invoices />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/todos"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Todos />
             </DashboardLayout>
           </ProtectedRoute>
         }
