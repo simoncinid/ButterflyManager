@@ -29,7 +29,6 @@ export default function EditProjectModal({ isOpen, onClose, project }: EditProje
     register,
     handleSubmit,
     watch,
-    reset,
     formState: { errors, isSubmitting },
   } = useForm<ProjectForm>({
     defaultValues: project

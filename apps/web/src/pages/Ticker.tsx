@@ -137,7 +137,7 @@ export default function Ticker() {
       className={`${
         isFullscreen
           ? 'fixed inset-0 z-50 bg-slate-900 dark:bg-slate-950'
-          : 'p-6 lg:p-8 max-w-7xl mx-auto'
+          : 'p-6 lg:p-8 max-w-7xl mx-auto relative'
       }`}
     >
       <div
@@ -283,43 +283,38 @@ export default function Ticker() {
             className={`${
               isFullscreen
                 ? 'fixed top-4 right-4 z-50'
-                : 'mt-6 mx-auto block'
-            } btn-primary`}
+                : 'absolute top-4 right-4'
+            } p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors`}
+            title={isFullscreen ? 'Esci da fullscreen' : 'Modalità fullscreen'}
           >
             {isFullscreen ? (
-              <>
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                Esci da fullscreen
-              </>
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
             ) : (
-              <>
-                <svg
-                  className="w-5 h-5 mr-2"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-                  />
-                </svg>
-                Modalità fullscreen
-              </>
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                />
+              </svg>
             )}
           </motion.button>
         )}

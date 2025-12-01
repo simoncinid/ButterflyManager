@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { analyticsApi, projectsApi } from '../lib/api';
-import { formatCurrency, formatMonthYear, getBillingModeLabel, formatHoursMinutes } from '../lib/utils';
+import { formatCurrency, formatMonthYear, formatHoursMinutes } from '../lib/utils';
 
 // Color palette for projects
 const PROJECT_COLORS = [
