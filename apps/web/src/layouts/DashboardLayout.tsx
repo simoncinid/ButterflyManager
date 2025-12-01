@@ -115,11 +115,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200 dark:border-slate-700">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" viewBox="0 0 100 100" fill="currentColor">
-                <path d="M50 20 C30 10, 10 30, 25 50 C10 70, 30 90, 50 80 C70 90, 90 70, 75 50 C90 30, 70 10, 50 20 Z"/>
-              </svg>
-            </div>
+            <img src="/logo.png" alt="Butterfly" className="w-10 h-10 object-contain" />
             <span className="text-xl font-display font-bold text-slate-900 dark:text-white">
               Butterfly
             </span>
@@ -202,11 +198,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </svg>
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" viewBox="0 0 100 100" fill="currentColor">
-                <path d="M50 20 C30 10, 10 30, 25 50 C10 70, 30 90, 50 80 C70 90, 90 70, 75 50 C90 30, 70 10, 50 20 Z"/>
-              </svg>
-            </div>
+            <img src="/logo.png" alt="Butterfly" className="w-8 h-8 object-contain" />
             <span className="font-display font-bold text-slate-900 dark:text-white">Butterfly</span>
           </div>
         </header>

@@ -163,15 +163,6 @@ export default function Projects() {
                       </p>
                     </div>
                   </div>
-
-                  {project.effectiveHourlyRate !== null && (
-                    <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Effective Rate</p>
-                      <p className="text-lg font-semibold text-amber-500">
-                        {formatCurrency(project.effectiveHourlyRate)}/h
-                      </p>
-                    </div>
-                  )}
                 </div>
               </Link>
             </motion.div>

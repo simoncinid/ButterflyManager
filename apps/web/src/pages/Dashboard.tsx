@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import {
   AreaChart,
   Area,
@@ -372,72 +371,6 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-      {/* Top Projects */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="card"
-      >
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
-            Top Projects
-          </h2>
-          <Link
-            to="/projects"
-            className="text-sm text-amber-500 hover:text-amber-600 font-medium"
-          >
-            View all →
-          </Link>
-        </div>
-        <div className="divide-y divide-slate-200 dark:divide-slate-700">
-          {dashboardData?.topProjects?.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              </div>
-              <p className="text-slate-600 dark:text-slate-400 mb-4">
-                No projects yet. Create your first project to get started!
-              </p>
-              <Link to="/projects" className="btn-primary">
-                Create Project
-              </Link>
-            </div>
-          ) : (
-            dashboardData?.topProjects?.map((project: any) => (
-              <Link
-                key={project.id}
-                to={`/projects/${project.id}`}
-                className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center text-white font-bold">
-                    {project.name[0]}
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-900 dark:text-white">
-                      {project.name}
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      {project.clientName || 'No client'} • {getBillingModeLabel(project.billingMode)}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold text-slate-900 dark:text-white">
-                    {formatCurrency(project.totalIncome)}
-                  </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {formatHoursMinutes(project.totalHours)}h tracked
-                  </p>
-                </div>
-              </Link>
-            ))
-          )}
-        </div>
-      </motion.div>
     </div>
   );
 }
