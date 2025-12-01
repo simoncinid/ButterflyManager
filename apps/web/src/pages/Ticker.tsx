@@ -25,7 +25,7 @@ interface MonthlyProject {
 export default function Ticker() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentAmount, setCurrentAmount] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<Date | null>(null);
 
   const { data: projects, isLoading } = useQuery({
