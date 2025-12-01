@@ -203,7 +203,7 @@ projectRouter.put('/:projectId', async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Delete/Archive project
+// Delete project (permanent deletion)
 projectRouter.delete('/:projectId', async (req: AuthRequest, res: Response) => {
   try {
     const existing = await prisma.project.findFirst({
@@ -214,13 +214,12 @@ projectRouter.delete('/:projectId', async (req: AuthRequest, res: Response) => {
       throw new AppError('Project not found', 404);
     }
 
-    // Soft delete by archiving
-    await prisma.project.update({
+    // Permanent delete - cascades to related records (timeEntries, todos, invoices, payments)
+    await prisma.project.delete({
       where: { id: req.params.projectId },
-      data: { status: ProjectStatus.ARCHIVED },
     });
 
-    res.json({ success: true, message: 'Project archived' });
+    res.json({ success: true, message: 'Project deleted' });
   } catch (error) {
     if (error instanceof AppError) {
       return res.status(error.statusCode).json({ success: false, error: error.message });
