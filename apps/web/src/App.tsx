@@ -16,6 +16,7 @@ import ProjectDetail from './pages/ProjectDetail';
 import Invoices from './pages/Invoices';
 import Todos from './pages/Todos';
 import Settings from './pages/Settings';
+import Ticker from './pages/Ticker';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, checkAuth } = useAuthStore();
@@ -161,6 +162,16 @@ function App() {
           <ProtectedRoute>
             <DashboardLayout>
               <Settings />
+            </DashboardLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/ticker"
+        element={
+          <ProtectedRoute>
+            <DashboardLayout>
+              <Ticker />
             </DashboardLayout>
           </ProtectedRoute>
         }
