@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '../lib/api';
+import { api, setTokens, clearTokens, getAccessToken } from '../lib/api';
 
 interface User {
   id: string;
@@ -28,12 +28,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   login: async (email: string, password: string) => {
     const response = await api.post('/auth/login', { email, password });
-    set({ user: response.data.data.user, isAuthenticated: true, isLoading: false });
+    const { user, accessToken, refreshToken } = response.data.data;
+    // Save tokens to localStorage
+    if (accessToken && refreshToken) {
+      setTokens(accessToken, refreshToken);
+    }
+    set({ user, isAuthenticated: true, isLoading: false });
   },
 
   register: async (email: string, password: string, name?: string) => {
     const response = await api.post('/auth/register', { email, password, name });
-    set({ user: response.data.data.user, isAuthenticated: true, isLoading: false });
+    const { user, accessToken, refreshToken } = response.data.data;
+    // Save tokens to localStorage
+    if (accessToken && refreshToken) {
+      setTokens(accessToken, refreshToken);
+    }
+    set({ user, isAuthenticated: true, isLoading: false });
   },
 
   logout: async () => {
@@ -42,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch {
       // Ignore errors on logout
     }
+    clearTokens();
     set({ user: null, isAuthenticated: false, isLoading: false, isCheckingAuth: false });
   },
 
@@ -56,6 +67,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
+    // Check if we have a token in localStorage
+    const token = getAccessToken();
+    if (!token) {
+      set({ 
+        user: null, 
+        isAuthenticated: false, 
+        isLoading: false,
+        isCheckingAuth: false 
+      });
+      return;
+    }
+
     set({ isCheckingAuth: true });
 
     try {
@@ -67,8 +90,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isCheckingAuth: false 
       });
     } catch (error: any) {
-      // If 401, don't try to refresh - just set as not authenticated
+      // If 401, clear tokens and set as not authenticated
       if (error.response?.status === 401) {
+        clearTokens();
         set({ 
           user: null, 
           isAuthenticated: false, 

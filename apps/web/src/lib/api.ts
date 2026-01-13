@@ -9,6 +9,21 @@ if (baseURL && !baseURL.endsWith('/api')) {
 // Log API configuration (always, not just in dev)
 console.log('🔗 API Base URL:', baseURL);
 
+// Token management
+const TOKEN_KEY = 'butterfly_access_token';
+const REFRESH_TOKEN_KEY = 'butterfly_refresh_token';
+
+export const getAccessToken = () => localStorage.getItem(TOKEN_KEY);
+export const getRefreshToken = () => localStorage.getItem(REFRESH_TOKEN_KEY);
+export const setTokens = (accessToken: string, refreshToken: string) => {
+  localStorage.setItem(TOKEN_KEY, accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+};
+export const clearTokens = () => {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+};
+
 export const api = axios.create({
   baseURL,
   withCredentials: true,
@@ -17,9 +32,13 @@ export const api = axios.create({
   },
 });
 
-// Request interceptor for debugging
+// Request interceptor - add Authorization header
 api.interceptors.request.use(
   (config) => {
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     if (import.meta.env.DEV) {
       console.log('API Request:', config.method?.toUpperCase(), config.url);
     }
@@ -76,6 +95,17 @@ api.interceptors.response.use(
 
     // If error is 401 and we haven't tried to refresh yet
     if (error.response?.status === 401 && !originalRequest._retry) {
+      const refreshToken = getRefreshToken();
+      
+      // If no refresh token, clear tokens and redirect
+      if (!refreshToken) {
+        clearTokens();
+        if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+          window.location.href = '/login';
+        }
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         // If already refreshing, queue this request
         return new Promise((resolve, reject) => {
@@ -93,15 +123,29 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Try to refresh token
-        await api.post('/auth/refresh');
+        // Try to refresh token - send refresh token in body for cross-domain support
+        const response = await axios.post(`${baseURL}/auth/refresh`, {}, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${refreshToken}`,
+          },
+          withCredentials: true,
+        });
+        
+        // Save new tokens
+        if (response.data?.data?.accessToken) {
+          setTokens(response.data.data.accessToken, response.data.data.refreshToken);
+        }
+        
         isRefreshing = false;
         processQueue(null, null);
-        // Retry the original request
+        // Retry the original request with new token
+        originalRequest.headers.Authorization = `Bearer ${getAccessToken()}`;
         return api(originalRequest);
       } catch (refreshError: any) {
         isRefreshing = false;
         processQueue(refreshError, null);
+        clearTokens();
         // Refresh failed, redirect to login only if not already on login page
         if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
           window.location.href = '/login';

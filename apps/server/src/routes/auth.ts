@@ -96,7 +96,11 @@ authRouter.post('/register', async (req: Request, res: Response) => {
     console.log('Registration successful');
     res.status(201).json({
       success: true,
-      data: { user },
+      data: { 
+        user,
+        accessToken,
+        refreshToken,
+      },
     });
   } catch (error: any) {
     console.error('Register error:', {
@@ -157,6 +161,8 @@ authRouter.post('/login', async (req: Request, res: Response) => {
           name: user.name,
           createdAt: user.createdAt,
         },
+        accessToken,
+        refreshToken,
       },
     });
   } catch (error) {
@@ -181,7 +187,15 @@ authRouter.post('/logout', (_req: Request, res: Response) => {
 // Refresh token
 authRouter.post('/refresh', async (req: Request, res: Response) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    // Try to get refresh token from cookie first, then from Authorization header
+    let refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      const authHeader = req.headers.authorization;
+      if (authHeader?.startsWith('Bearer ')) {
+        refreshToken = authHeader.split(' ')[1];
+      }
+    }
+    
     if (!refreshToken) {
       throw new AppError('Refresh token required', 401);
     }
@@ -198,7 +212,13 @@ authRouter.post('/refresh', async (req: Request, res: Response) => {
     const tokens = generateTokens(user.id);
     setTokenCookies(res, tokens.accessToken, tokens.refreshToken);
 
-    res.json({ success: true });
+    res.json({ 
+      success: true,
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
+    });
   } catch (error) {
     res.clearCookie('accessToken');
     res.clearCookie('refreshToken');
