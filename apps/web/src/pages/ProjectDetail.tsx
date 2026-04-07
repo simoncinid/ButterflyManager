@@ -27,6 +27,8 @@ export default function ProjectDetail() {
   const [editingTodo, setEditingTodo] = useState<any>(null);
   const [editingTimeEntry, setEditingTimeEntry] = useState<any>(null);
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
+  const [timeEntriesPage, setTimeEntriesPage] = useState(1);
+  const timeEntriesPerPage = 20;
 
   // Fetch project data
   const { data: project, isLoading, refetch: refetchProject } = useQuery({
@@ -37,6 +39,22 @@ export default function ProjectDetail() {
     },
     enabled: !!projectId,
   });
+
+  const { data: allTimeEntriesData } = useQuery({
+    queryKey: ['projectTimeEntries', projectId],
+    queryFn: async () => {
+      const res = await projectsApi.getTimeEntries(projectId!);
+      return res.data.data;
+    },
+    enabled: !!projectId && activeTab === 'time',
+  });
+
+  const allTimeEntries = allTimeEntriesData || [];
+  const totalTimeEntriesPages = Math.max(1, Math.ceil(allTimeEntries.length / timeEntriesPerPage));
+  const paginatedTimeEntries = allTimeEntries.slice(
+    (timeEntriesPage - 1) * timeEntriesPerPage,
+    timeEntriesPage * timeEntriesPerPage
+  );
 
   // Timer effect
   useEffect(() => {
@@ -60,6 +78,7 @@ export default function ProjectDetail() {
     mutationFn: () => projectsApi.startTimer(projectId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projectTimeEntries', projectId] });
       queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
       toast.success('Timer started!');
     },
@@ -73,6 +92,7 @@ export default function ProjectDetail() {
     mutationFn: (timeEntryId: string) => projectsApi.resumeTimer(projectId!, timeEntryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projectTimeEntries', projectId] });
       queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
       toast.success('Timer resumed!');
     },
@@ -92,6 +112,7 @@ export default function ProjectDetail() {
       // Immediately refetch to get updated data
       await refetchProject();
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projectTimeEntries', projectId] });
       queryClient.invalidateQueries({ queryKey: ['activeTimer'] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       toast.success('Timer stopped!');
@@ -152,6 +173,7 @@ export default function ProjectDetail() {
       projectsApi.updateTimeEntry(projectId!, timeEntryId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projectTimeEntries', projectId] });
       setEditingTimeEntry(null);
       toast.success('Time entry updated!');
     },
@@ -165,6 +187,7 @@ export default function ProjectDetail() {
       projectsApi.deleteTimeEntry(projectId!, timeEntryId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['projectTimeEntries', projectId] });
       toast.success('Time entry deleted!');
     },
     onError: () => {
@@ -199,6 +222,16 @@ export default function ProjectDetail() {
       dueDate: newTodoDueDate || undefined,
     });
   };
+
+  useEffect(() => {
+    setTimeEntriesPage(1);
+  }, [projectId, activeTab]);
+
+  useEffect(() => {
+    if (timeEntriesPage > totalTimeEntriesPages) {
+      setTimeEntriesPage(totalTimeEntriesPages);
+    }
+  }, [timeEntriesPage, totalTimeEntriesPages]);
 
   if (isLoading) {
     return (
@@ -435,7 +468,7 @@ export default function ProjectDetail() {
             <h3 className="font-semibold text-slate-900 dark:text-white">Time Entries</h3>
           </div>
           <div className="divide-y divide-slate-200 dark:divide-slate-700">
-            {project.timeEntries?.map((entry: any) => (
+            {paginatedTimeEntries.map((entry: any) => (
               <div key={entry.id} className="px-6 py-4 flex items-center justify-between">
                 <div className="flex-1">
                   <p className="font-medium text-slate-900 dark:text-white">
@@ -500,7 +533,7 @@ export default function ProjectDetail() {
                 </div>
               </div>
             ))}
-            {(!project.timeEntries || project.timeEntries.length === 0) && (
+            {allTimeEntries.length === 0 && (
               <div className="px-6 py-12 text-center">
                 <p className="text-slate-500 dark:text-slate-400">
                   No time entries yet. Start the timer to begin tracking!
@@ -508,6 +541,33 @@ export default function ProjectDetail() {
               </div>
             )}
           </div>
+          {allTimeEntries.length > 0 && (
+            <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Showing {(timeEntriesPage - 1) * timeEntriesPerPage + 1}-
+                {Math.min(timeEntriesPage * timeEntriesPerPage, allTimeEntries.length)} of {allTimeEntries.length}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setTimeEntriesPage((prev) => Math.max(1, prev - 1))}
+                  disabled={timeEntriesPage === 1}
+                  className="btn-ghost text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Prev
+                </button>
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  Page {timeEntriesPage} / {totalTimeEntriesPages}
+                </span>
+                <button
+                  onClick={() => setTimeEntriesPage((prev) => Math.min(totalTimeEntriesPages, prev + 1))}
+                  disabled={timeEntriesPage === totalTimeEntriesPages}
+                  className="btn-ghost text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 
