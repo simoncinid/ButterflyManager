@@ -5,6 +5,9 @@ import path from 'path';
 export default defineConfig({
   root: path.resolve(__dirname, '.'),
   plugins: [react()],
+  css: {
+    postcss: path.resolve(__dirname, './postcss.config.js'),
+  },
   build: {
     // Sites packages a Worker from root/dist. Keep browser assets alongside it
     // so the Worker can serve the React SPA and /api from one origin.

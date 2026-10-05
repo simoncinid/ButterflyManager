@@ -1,6 +1,14 @@
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const appRoot = fileURLToPath(new URL('.', import.meta.url));
+
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  content: [
+    resolve(appRoot, 'index.html'),
+    resolve(appRoot, 'src/**/*.{js,ts,jsx,tsx}'),
+  ],
   darkMode: 'class',
   theme: {
     extend: {
@@ -40,4 +48,3 @@ export default {
   },
   plugins: [],
 };
-

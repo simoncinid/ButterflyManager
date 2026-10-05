@@ -1,7 +1,10 @@
-export default {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-};
+import autoprefixer from 'autoprefixer';
+import tailwindcss from 'tailwindcss';
+import { fileURLToPath } from 'node:url';
 
+export default {
+  plugins: [
+    tailwindcss({ config: fileURLToPath(new URL('./tailwind.config.js', import.meta.url)) }),
+    autoprefixer(),
+  ],
+};
