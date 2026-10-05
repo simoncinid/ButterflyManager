@@ -124,11 +124,13 @@ This will start:
 5. Set environment variables:
    - `VITE_API_BASE_URL`
 
-### Database (DigitalOcean)
+### Database (PostgreSQL gratuito)
 
-1. Create a Managed PostgreSQL database
-2. Get the connection string and CA certificate
-3. Run migrations: `yarn db:migrate`
+1. Crea un progetto gratuito su [Neon](https://neon.tech) e copia la connection string PostgreSQL con SSL.
+2. Imposta quella stringa come `DATABASE_URL` su Render.
+3. Crea lo schema con `DATABASE_URL='…' yarn db:push`.
+
+Per recuperare i dati del backup senza importare `emails` o altre tabelle estranee, vedi [RECUPERO_DATABASE.md](RECUPERO_DATABASE.md).
 
 ## Billing Logic
 
@@ -179,4 +181,3 @@ This will start:
 ## License
 
 MIT
-
