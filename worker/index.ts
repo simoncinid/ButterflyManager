@@ -23,6 +23,17 @@ interface Env {
   ASSETS?: { fetch(request: Request): Promise<Response> };
 }
 
+type EmbeddedAsset = { body: string; contentType: string };
+
+function embeddedAsset(request: Request) {
+  const assets = (globalThis as typeof globalThis & { __BUTTERFLY_ASSETS__?: Record<string, EmbeddedAsset> }).__BUTTERFLY_ASSETS__;
+  if (!assets) return null;
+  const pathname = new URL(request.url).pathname;
+  const asset = assets[pathname] || assets["/index.html"];
+  if (!asset) return null;
+  return new Response(fromBase64(asset.body), { headers: { "content-type": asset.contentType } });
+}
+
 type Row = Record<string, unknown>;
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
@@ -295,6 +306,8 @@ export default {
       try { return await handleApi(request, env); } catch (error) { console.error(error); return failure("Internal server error", 500); }
     }
     if (env.ASSETS) return env.ASSETS.fetch(request);
+    const asset = embeddedAsset(request);
+    if (asset) return asset;
     return new Response("ButterflyManager Sites worker", { status: 200 });
   },
 };
