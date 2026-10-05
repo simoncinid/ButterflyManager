@@ -128,7 +128,9 @@ This will start:
 
 1. Crea un progetto gratuito su [Neon](https://neon.tech) e copia la connection string PostgreSQL con SSL.
 2. Imposta quella stringa come `DATABASE_URL` su Render.
-3. Crea lo schema con `DATABASE_URL='…' yarn db:push`.
+3. Le migration PostgreSQL sono incluse nel repository e vengono applicate automaticamente dal deploy Render.
+
+> Non usare l'URL MySQL di DigitalOcean: questo progetto usa Prisma con PostgreSQL.
 
 Per recuperare i dati del backup senza importare `emails` o altre tabelle estranee, vedi [RECUPERO_DATABASE.md](RECUPERO_DATABASE.md).
 

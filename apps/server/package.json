@@ -9,7 +9,7 @@
     "migrate": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
     "restore:backup": "tsx src/scripts/restore-butterfly-backup.ts",
-    "deploy": "yarn prisma generate && yarn prisma migrate deploy && yarn build",
+    "deploy": "yarn prisma migrate deploy && yarn build",
     "lint": "eslint src --ext .ts",
     "test": "vitest",
     "prisma": "prisma"
